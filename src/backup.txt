@@ -1,0 +1,1764 @@
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  CheckCircle2, Circle, Plus, Trash2, Calendar, Link as LinkIcon, 
+  BookOpen, School, Wrench, Users, Coffee, LayoutDashboard,
+  ExternalLink, Clock, MapPin, Sparkles, Loader2, X, Moon, Sun,
+  UserCircle, MoonStar, StickyNote, Zap, Bell, LogOut, Mail, Lock,
+  Bot, MessageSquare, Search, BrainCircuit, Cpu,
+  ShieldCheck, Vault, Eye, EyeOff, Menu, Heart, UserPlus, Quote,
+  Book, LockKeyhole,
+  Settings as SettingsIcon, ChevronLeft, ChevronRight, Delete,
+  ShieldAlert, Flame, ChevronDown, Star
+} from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, collection, doc, setDoc, addDoc, deleteDoc, 
+  onSnapshot, updateDoc
+} from 'firebase/firestore';
+import { 
+  getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile,
+  signOut, setPersistence, browserSessionPersistence, EmailAuthProvider,
+  reauthenticateWithCredential
+} from 'firebase/auth';
+
+// --- FIREBASE CONFIGURATION ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBNPdHfnwBRNeHBlV9WI8oOUKV1TEy4LdE",
+  authDomain: "studyflow-3686a.firebaseapp.com",
+  projectId: "studyflow-3686a",
+  storageBucket: "studyflow-3686a.firebasestorage.app",
+  messagingSenderId: "178478131685",
+  appId: "1:178478131685:web:7621636018e64269a8270c"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'uiu-studyflow-v4.26'; 
+
+setPersistence(auth, browserSessionPersistence);
+
+// --- CONSTANTS ---
+const CATEGORIES = {
+  OFFICIAL: { id: 'official', label: 'Official UIU', icon: School, color: 'text-orange-500', bg: 'bg-orange-50/50 dark:bg-orange-500/10' },
+  MATERIALS: { id: 'materials', label: 'Materials', icon: BookOpen, color: 'text-blue-500', bg: 'bg-blue-50/50 dark:bg-blue-500/10' },
+  TOOLS: { id: 'tools', label: 'Tools', icon: Wrench, color: 'text-purple-500', bg: 'bg-purple-50/50 dark:bg-purple-500/10' },
+  COMMUNITY: { id: 'community', label: 'Community', icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-50/50 dark:bg-emerald-500/10' },
+  FUN: { id: 'fun', label: 'Fun Break', icon: Coffee, color: 'text-pink-500', bg: 'bg-pink-50/50 dark:bg-pink-500/10' },
+  PROFILES: { id: 'profiles', label: 'Profiles', icon: UserCircle, color: 'text-indigo-500', bg: 'bg-indigo-50/50 dark:bg-indigo-500/10' },
+};
+
+const CATEGORY_ORDER = ['official', 'materials', 'tools', 'community', 'fun', 'profiles'];
+
+const AI_TOOLS = [
+  { name: 'ChatGPT', url: 'https://chatgpt.com', icon: MessageSquare, color: 'text-emerald-500' },
+  { name: 'Claude', url: 'https://claude.ai', icon: BrainCircuit, color: 'text-orange-400' },
+  { name: 'Gemini', url: 'https://gemini.google.com', icon: Sparkles, color: 'text-blue-500' },
+  { name: 'Perplexity', url: 'https://perplexity.ai', icon: Search, color: 'text-cyan-500' },
+  { name: 'Grok', url: 'https://x.ai', icon: Cpu, color: 'text-slate-500 dark:text-slate-100' },
+  { name: 'Copilot', url: 'https://copilot.microsoft.com', icon: Bot, color: 'text-indigo-500' },
+  { name: 'NotebookLM', url: 'https://notebooklm.google.com', icon: BookOpen, color: 'text-blue-400' },
+];
+
+const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+// --- DIARY MOODS ---
+const MOODS = [
+  { id: 'happy', emoji: '😎', label: 'Happy', color: 'text-teal-500', hex: '#2dd4bf', bg: 'bg-teal-500/10' },
+  { id: 'good', emoji: '🙂', label: 'Good', color: 'text-indigo-500', hex: '#818cf8', bg: 'bg-indigo-500/10' },
+  { id: 'neutral', emoji: '😐', label: 'Neutral', color: 'text-slate-500', hex: '#94a3b8', bg: 'bg-slate-500/10' },
+  { id: 'sad', emoji: '😔', label: 'Sad', color: 'text-orange-500', hex: '#fb923c', bg: 'bg-orange-500/10' },
+  { id: 'awful', emoji: '😭', label: 'Awful', color: 'text-rose-500', hex: '#f43f5e', bg: 'bg-rose-500/10' },
+];
+
+const QUOTE_BANK = [
+  "Indeed, with hardship comes ease. — Quran 94:6",
+  "Do not lose hope, nor be sad. — Quran 3:139",
+  "Verily, in the remembrance of Allah do hearts find rest. — Quran 13:28",
+  "The best among you are those who have the best character. — Prophet Muhammad (SAW)",
+  "Actions are judged by intentions. — Prophet Muhammad (SAW)",
+  "And whoever puts their trust in Allah, He will be sufficient for them. — Quran 65:3",
+  "Discipline is choosing what you want most over what you want now.",
+  "The journey of a thousand miles begins with a single step. — Lao Tzu",
+  "Success is the sum of small efforts repeated day in and day out. — Robert Collier",
+  "A person who never made a mistake never tried anything new. — Albert Einstein",
+  "Do something today your future self will thank you for.",
+  "The future belongs to those who prepare for it today. — Malcolm X",
+  "If you can't explain it simply, you don't understand it well enough. — Einstein",
+  "Programs must be written for people to read. — Harold Abelson",
+  "First, solve the problem. Then, write the code. — John Johnson",
+  "Any fool can write code that a computer can understand. Good programmers write code humans can understand. — Martin Fowler",
+  "Debugging is twice as hard as writing the code in the first place. — Brian Kernighan",
+  "Simplicity is the soul of efficiency. — Austin Freeman",
+  "The only way to do great work is to love what you do. — Steve Jobs",
+  "Why do we fall? So that we can learn to pick ourselves up. — Batman Begins",
+  "It’s not who I am underneath, but what I do that defines me. — Batman Begins",
+  "Hope is a good thing, maybe the best of things. — Shawshank Redemption",
+  "Great men are not born great, they grow great. — The Godfather",
+  "I don't pay for suits. My suits are on the house or the house burns down. — Tommy Shelby",
+  "When You Plan Something Well, There’s No Need To Rush. — Tommy Shelby",
+  "The best way to predict the future is to invent it. — Alan Kay",
+  "Your time is limited, so don't waste it living someone else's life. — Steve Jobs",
+  "Logic will get you from A to B. Imagination will take you everywhere. — Albert Einstein",
+  "Quality is not an act, it is a habit. — Aristotle",
+  "The only thing we have to fear is fear itself. — Franklin D. Roosevelt"
+];
+
+const DAY_STYLES = {
+  Saturday: { bg: 'bg-orange-50/40 dark:bg-orange-950/20 backdrop-blur-md', border: 'border-orange-100/50 dark:border-orange-800/30', accent: 'text-orange-600', grad: 'from-orange-500/10 to-transparent' },
+  Sunday: { bg: 'bg-blue-50/40 dark:bg-blue-950/20 backdrop-blur-md', border: 'border-blue-100/50 dark:border-blue-800/30', accent: 'text-blue-600', grad: 'from-blue-500/10 to-transparent' },
+  Monday: { bg: 'bg-emerald-50/40 dark:bg-emerald-950/20 backdrop-blur-md', border: 'border-emerald-100/50 dark:border-emerald-800/30', accent: 'text-emerald-600', grad: 'from-emerald-500/10 to-transparent' },
+  Tuesday: { bg: 'bg-purple-50/40 dark:bg-purple-950/20 backdrop-blur-md', border: 'border-purple-100/50 dark:border-purple-800/30', accent: 'text-purple-600', grad: 'from-purple-500/10 to-transparent' },
+  Wednesday: { bg: 'bg-pink-50/40 dark:bg-pink-950/20 backdrop-blur-md', border: 'border-pink-100/50 dark:border-pink-800/30', accent: 'text-pink-600', grad: 'from-pink-500/10 to-transparent' },
+  Thursday: { bg: 'bg-amber-50/40 dark:bg-amber-950/20 backdrop-blur-md', border: 'border-amber-100/50 dark:border-amber-800/30', accent: 'text-amber-600', grad: 'from-amber-500/10 to-transparent' },
+  Friday: { bg: 'bg-slate-50/40 dark:bg-slate-900/30 backdrop-blur-md', border: 'border-slate-100/50 dark:border-slate-800/30', accent: 'text-slate-600', grad: 'from-slate-500/10 to-transparent' },
+};
+
+// --- TYPEWRITER DATA ---
+const TYPEWRITER_ITEMS = [
+  { text: "managing your daily tasks.", color: "text-emerald-600 dark:text-emerald-400" },
+  { text: "organizing your course schedule.", color: "text-blue-600 dark:text-blue-400" },
+  { text: "managing your academic resources.", color: "text-purple-600 dark:text-purple-400" },
+  { text: "keeping your thoughts secure.", color: "text-pink-600 dark:text-pink-400" }
+];
+
+// --- CUSTOM HOOK: CLEAN TYPEWRITER ANIMATION ---
+const TypewriterEffect = ({ items, typingSpeed = 50, deletingSpeed = 30, pauseDuration = 2000 }) => {
+  const [text, setText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [loopNum, setLoopNum] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    const i = loopNum % items.length;
+    const fullText = items[i].text;
+
+    if (isDeleting) {
+      timer = setTimeout(() => {
+        setText(fullText.substring(0, text.length - 1));
+      }, deletingSpeed);
+    } else {
+      timer = setTimeout(() => {
+        setText(fullText.substring(0, text.length + 1));
+      }, typingSpeed);
+    }
+
+    if (!isDeleting && text === fullText) {
+      timer = setTimeout(() => setIsDeleting(true), pauseDuration);
+    } else if (isDeleting && text === '') {
+      timer = setTimeout(() => {
+        setIsDeleting(false);
+        setLoopNum(prev => prev + 1);
+      }, 300); 
+    }
+
+    return () => clearTimeout(timer);
+  }, [text, isDeleting, loopNum, items, typingSpeed, deletingSpeed, pauseDuration]);
+
+  const currentColor = items[loopNum % items.length].color;
+
+  return (
+    <span className={`inline-flex items-center transition-colors duration-300 font-bold ${currentColor}`}>
+      {text}
+      <span className="animate-pulse inline-block ml-[2px] opacity-70 w-[2px] h-[1.1em] bg-current translate-y-[1px]"></span>
+    </span>
+  );
+};
+
+// --- CUSTOM COMPONENT: GLASS SELECT DROPDOWN ---
+const GlassSelect = ({ value, onChange, options, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <button 
+        type="button" 
+        onClick={() => setIsOpen(!isOpen)} 
+        className="w-full p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 shadow-sm outline-none dark:text-white flex justify-between items-center transition-colors hover:bg-white/60 dark:hover:bg-slate-800/70"
+      >
+        <span>{options.find(o => o.value === value)?.label || placeholder}</span>
+        <ChevronDown size={16} className={`text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-[100] w-full mt-2 bg-white/80 dark:bg-slate-800/90 backdrop-blur-2xl border border-white/50 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="max-h-60 overflow-y-auto custom-scrollbar py-1">
+            {options.map(opt => (
+              <button 
+                type="button" 
+                key={opt.value} 
+                onClick={() => { onChange(opt.value); setIsOpen(false); }} 
+                className={`w-full text-left px-4 py-3 text-sm font-bold transition-all hover:bg-black/5 dark:hover:bg-white/10 ${value === opt.value ? 'text-orange-500 bg-orange-50/50 dark:bg-orange-500/10' : 'text-slate-700 dark:text-slate-200'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- CUSTOM COMPONENT: DIARY ENTRY MODAL (Isolated to stop typing lag) ---
+const DiaryEntryModal = ({ onClose, onSave }) => {
+  const [text, setText] = useState("");
+  const [mood, setMood] = useState("happy");
+
+  return (
+    <div className="absolute inset-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300 transform-gpu">
+      <div className="px-6 py-4 flex justify-between items-center border-b border-white/50 dark:border-white/10 shadow-sm">
+        <button onClick={onClose} className="p-2 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full transition-colors outline-none shadow-sm border border-white/40 dark:border-white/10"><X size={20} /></button>
+        <h3 className="text-base font-extrabold text-slate-800 dark:text-white">How are you feeling?</h3>
+        <button onClick={() => onSave({ text, mood })} className="px-5 py-2 bg-pink-500/90 backdrop-blur-md text-white rounded-xl text-sm font-bold shadow-lg shadow-pink-500/30 hover:bg-pink-600 transition-colors active:scale-95 outline-none border border-white/20">Save</button>
+      </div>
+      
+      <div className="p-6 md:p-8 flex flex-col flex-grow">
+        <div className="mb-8 flex gap-3 overflow-x-auto pb-4 custom-scrollbar justify-start sm:justify-center">
+           {MOODS.map(m => (
+             <button 
+               key={m.id} 
+               onClick={() => setMood(m.id)}
+               className={`shrink-0 flex flex-col items-center justify-center gap-2 w-20 h-24 rounded-2xl transition-all outline-none border border-white/40 dark:border-white/10 backdrop-blur-md ${mood === m.id ? `border-pink-400 bg-pink-100/60 dark:bg-pink-500/20 scale-110 shadow-lg` : `bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-700/60 shadow-sm`}`}
+             >
+               <span className="text-3xl leading-none">{m.emoji}</span>
+               <span className={`text-xs font-extrabold ${mood === m.id ? 'text-pink-600 dark:text-pink-400' : 'text-slate-600 dark:text-slate-400'}`}>{m.label}</span>
+             </button>
+           ))}
+        </div>
+
+        <textarea 
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder="Write your thoughts here..."
+          className="flex-grow w-full bg-white/50 dark:bg-slate-800/40 backdrop-blur-md p-5 rounded-3xl border border-white/60 dark:border-white/10 text-base font-medium text-slate-800 dark:text-slate-200 shadow-inner focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500/50 outline-none resize-none placeholder-slate-500 custom-scrollbar leading-relaxed"
+          autoFocus
+        />
+      </div>
+    </div>
+  );
+};
+
+export default function App() {
+  // --- CORE STATE ---
+  const [user, setUser] = useState(null);
+  const [authMode, setAuthMode] = useState('login'); 
+  const [authData, setAuthData] = useState({ email: '', password: '', username: '' });
+  const [authLoading, setAuthLoading] = useState(true); 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+
+  // --- UI STATE ---
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [darkMode, setDarkMode] = useState(false); 
+  const [ramadanMode, setRamadanMode] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // --- DATA STATE ---
+  const [tasks, setTasks] = useState([]);
+  const [routine, setRoutine] = useState([]);
+  const [links, setLinks] = useState([]);
+  const [vaultLinks, setVaultLinks] = useState([]);
+  const [scratchpad, setScratchpad] = useState("");
+
+  // --- DIARY STATE ---
+  const [diaryEntries, setDiaryEntries] = useState([]);
+  const [diaryPin, setDiaryPin] = useState(null);
+  const [isDiaryUnlocked, setIsDiaryUnlocked] = useState(false);
+  
+  const [pinInput, setPinInput] = useState("");
+  const [pinMode, setPinMode] = useState("unlock"); 
+  const [tempPin, setTempPin] = useState("");
+  const [diaryError, setDiaryError] = useState("");
+  const [resetPasswordInput, setResetPasswordInput] = useState("");
+  
+  const [diaryView, setDiaryView] = useState("entries"); 
+  const [selectedDiaryDate, setSelectedDiaryDate] = useState(new Date());
+  const [isAddingDiary, setIsAddingDiary] = useState(false);
+  const [isDiarySettingsOpen, setIsDiarySettingsOpen] = useState(false);
+  const [viewingEntry, setViewingEntry] = useState(null);
+
+  // --- QUOTE LOGIC STATE ---
+  const [quoteRevealed, setQuoteRevealed] = useState(false);
+  const [dailyQuote, setDailyQuote] = useState("");
+  const [userQuoteData, setUserQuoteData] = useState({ index: -1, date: "" });
+
+  // --- INPUT STATE ---
+  const [newTask, setNewTask] = useState('');
+  const [taskPriority, setTaskPriority] = useState('medium');
+  const [newRoutine, setNewRoutine] = useState({ 
+    day: 'Saturday', course: '', code: '', faculty: '', facultyFull: '', facultyContact: '', time: '', room: '', ramadanTime: '' 
+  });
+  const [newLink, setNewLink] = useState({ title: '', url: '', category: 'official' });
+  const [newVaultLink, setNewVaultLink] = useState({ title: '', url: '', hint: '' });
+  
+  // --- INTERACTION STATE ---
+  const [isAddingRoutine, setIsAddingRoutine] = useState(false);
+  const [isAddingLink, setIsAddingLink] = useState(false);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [isAddingVaultLink, setIsAddingVaultLink] = useState(false);
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const [showVaultLinks, setShowVaultLinks] = useState({});
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const notifiedClasses = useRef(new Set());
+
+  // --- CLOCK ENGINE ---
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // --- DARK MODE LOGIC ---
+  useEffect(() => {
+    if (window.tailwind && !window.tailwind.initialized) {
+      window.tailwind.config = { darkMode: 'class' };
+      window.tailwind.initialized = true;
+    }
+    const html = document.documentElement;
+    if (darkMode) html.classList.add('dark');
+    else html.classList.remove('dark');
+  }, [darkMode]);
+  
+  // --- AUTH LISTENER ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // --- DERIVED DATA ---
+  const currentDayClassesList = useMemo(() => {
+    const jsDayToName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return routine.filter(r => r.day === jsDayToName[currentTime.getDay()]);
+  }, [routine, currentTime]); 
+
+  // --- NOTIFICATION ENGINE ---
+  useEffect(() => {
+    if (!notificationsEnabled || routine.length === 0 || !user) return;
+    
+    const interval = setInterval(() => {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+      const now = new Date();
+      const jsDayToName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const today = jsDayToName[now.getDay()];
+      
+      routine.filter(r => r.day === today).forEach(cls => {
+        const timeStr = ramadanMode && cls.ramadanTime ? cls.ramadanTime : cls.time;
+        if (!timeStr) return;
+        
+        const match = timeStr.match(/(\d+)[:.](\d+)\s*(AM|PM)/i);
+        if (!match) return;
+        
+        let [ , hStr, mStr, p] = match;
+        let h = parseInt(hStr);
+        let m = parseInt(mStr);
+        if (p.toUpperCase() === 'PM' && h !== 12) h += 12;
+        if (p.toUpperCase() === 'AM' && h === 12) h = 0;
+        
+        const classDate = new Date();
+        classDate.setHours(h, m, 0, 0);
+        
+        const diffInMinutes = Math.round((classDate.getTime() - now.getTime()) / 60000);
+        
+        if (diffInMinutes >= 29 && diffInMinutes <= 31) {
+          const key = cls.id + now.toDateString();
+          if (!notifiedClasses.current.has(key)) {
+            try {
+              new Notification(`Class Reminder: ${cls.course}`, {
+                body: `Your class starts in ${diffInMinutes} minutes at Room ${cls.room}. Time to get ready!`,
+              });
+            } catch(e) {
+              console.error("Notification trigger failed", e);
+            }
+            notifiedClasses.current.add(key);
+          }
+        }
+      });
+    }, 15000); 
+    
+    return () => clearInterval(interval);
+  }, [notificationsEnabled, routine, ramadanMode, user]);
+
+  // --- AUTH HANDLERS ---
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setResetSent(false);
+    setIsSubmitting(true);
+    try {
+      if (authMode === 'signup') {
+        const { username, email, password } = authData;
+        if (!username || !email || !password) throw new Error("Please fill in all fields.");
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCred.user, { displayName: username });
+      } else {
+        await signInWithEmailAndPassword(auth, authData.email, authData.password);
+      }
+    } catch (err) {
+      setAuthError(err.message.replace('Firebase:', '').replace('auth/', ''));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    if (e) e.preventDefault();
+    if (!authData.email) {
+      setAuthError("Please enter your email to reset password.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await sendPasswordResetEmail(auth, authData.email);
+      setResetSent(true);
+      setAuthError("");
+    } catch (err) {
+      setAuthError("Reset failed: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLogout = () => {
+    signOut(auth);
+    setIsProfileModalOpen(false);
+    setIsVaultOpen(false);
+    setMobileSidebarOpen(false);
+    setQuoteRevealed(false);
+    setDailyQuote("");
+    setIsDiaryUnlocked(false);
+  };
+
+  const handleTabChange = (id) => {
+    setActiveTab(id);
+    if (id !== 'diary') {
+      setIsDiaryUnlocked(false);
+      setPinInput("");
+      setPinMode("unlock");
+      setIsDiarySettingsOpen(false);
+    }
+  };
+
+  // --- DATA SYNC (FIRESTORE) ---
+  useEffect(() => {
+    if (!user) return;
+    const tasksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'tasks');
+    const routineRef = collection(db, 'artifacts', appId, 'users', user.uid, 'routine');
+    const linksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'links');
+    const vaultRef = collection(db, 'artifacts', appId, 'users', user.uid, 'vaultLinks');
+    const diaryRef = collection(db, 'artifacts', appId, 'users', user.uid, 'diaryEntries');
+    
+    const settingsDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'scratchpad');
+    const quoteDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'quoteData');
+    const diarySettingsDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'diaryConfig');
+
+    const unsubTasks = onSnapshot(tasksRef, (s) => setTasks(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubRoutine = onSnapshot(routineRef, (s) => setRoutine(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubLinks = onSnapshot(linksRef, (s) => setLinks(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubVault = onSnapshot(vaultRef, (s) => setVaultLinks(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubScratch = onSnapshot(settingsDoc, (s) => setScratchpad(s.data()?.text || ""));
+    
+    const unsubDiary = onSnapshot(diaryRef, (s) => setDiaryEntries(s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt)));
+    const unsubDiarySettings = onSnapshot(diarySettingsDoc, (s) => {
+       const data = s.data();
+       setDiaryPin(data?.pin || null);
+    });
+
+    const unsubQuote = onSnapshot(quoteDoc, (s) => {
+      const data = s.data();
+      const todayString = new Date().toDateString();
+      if (data) {
+        setUserQuoteData({ index: data.index ?? -1, date: data.date || "" });
+        if (data.date === todayString) {
+          setQuoteRevealed(true);
+          setDailyQuote(QUOTE_BANK[data.index % QUOTE_BANK.length]);
+        } else {
+          setQuoteRevealed(false);
+          setDailyQuote("");
+        }
+      } else {
+        setQuoteRevealed(false);
+        setDailyQuote("");
+      }
+    });
+
+    return () => { unsubTasks(); unsubRoutine(); unsubLinks(); unsubVault(); unsubScratch(); unsubQuote(); unsubDiary(); unsubDiarySettings(); };
+  }, [user]);
+
+  // Initial Pin Logic for First Timers
+  useEffect(() => {
+    if (activeTab === 'diary' && diaryPin === null && pinMode === 'unlock') {
+      setPinMode('setup1');
+    }
+  }, [activeTab, diaryPin, pinMode]);
+
+
+  // --- QUOTE HANDLER ---
+  const handleRevealQuote = async () => {
+    if (!user) return;
+    const today = new Date().toDateString();
+    
+    let newIndex = userQuoteData.index;
+    if (userQuoteData.date !== today) {
+      newIndex = userQuoteData.date === "" ? 0 : (userQuoteData.index + 1) % QUOTE_BANK.length;
+    }
+
+    const selectedQuote = QUOTE_BANK[newIndex];
+    setDailyQuote(selectedQuote);
+    setQuoteRevealed(true);
+
+    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'quoteData'), {
+      index: newIndex,
+      date: today
+    }, { merge: true });
+  };
+
+  const toggleNotifications = () => {
+    if (!("Notification" in window)) {
+      alert("Your browser does not support desktop notifications.");
+      return;
+    }
+
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      return;
+    }
+
+    if (Notification.permission === "granted") {
+      setNotificationsEnabled(true);
+      new Notification("Alerts Enabled", {
+        body: "StudyFlow will remind you 30 minutes before classes.",
+      });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          setNotificationsEnabled(true);
+          new Notification("Alerts Enabled", {
+            body: "StudyFlow will remind you 30 minutes before classes.",
+          });
+        } else {
+          alert("Please allow notifications in your browser settings to receive reminders.");
+        }
+      });
+    } else {
+      alert("Notifications are currently blocked. Please allow them in your browser settings.");
+    }
+  };
+
+  // --- DIARY LOGIC ---
+  const handlePinInput = (digit) => {
+    setDiaryError("");
+    if (pinInput.length < 4) {
+      const newPin = pinInput + digit;
+      setPinInput(newPin);
+      
+      if (newPin.length === 4) {
+        // Reduced timeout from 150ms to 30ms to completely remove the lag feeling
+        setTimeout(() => processCompletePin(newPin), 30);
+      }
+    }
+  };
+
+  const processCompletePin = async (fullPin) => {
+    if (pinMode === 'unlock') {
+      if (fullPin === diaryPin) {
+        setIsDiaryUnlocked(true);
+        setPinInput("");
+      } else {
+        setDiaryError("Incorrect PIN");
+        setPinInput("");
+      }
+    } else if (pinMode === 'setup1') {
+      setTempPin(fullPin);
+      setPinMode('setup2');
+      setPinInput("");
+    } else if (pinMode === 'setup2') {
+      if (fullPin === tempPin) {
+        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'diaryConfig'), { pin: fullPin }, { merge: true });
+        setIsDiaryUnlocked(true);
+        setPinMode('unlock');
+        setPinInput("");
+        setTempPin("");
+      } else {
+        setDiaryError("PINs do not match. Try again.");
+        setPinMode('setup1');
+        setPinInput("");
+        setTempPin("");
+      }
+    } else if (pinMode === 'settings_auth') {
+      if (fullPin === diaryPin) {
+        setPinMode('settings_new');
+        setPinInput("");
+      } else {
+        setDiaryError("Incorrect Current PIN");
+        setPinInput("");
+      }
+    } else if (pinMode === 'settings_new') {
+      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'diaryConfig'), { pin: fullPin }, { merge: true });
+      setPinMode('unlock');
+      setPinInput("");
+      setIsDiarySettingsOpen(false);
+      setDiaryError("PIN Updated Successfully");
+      setTimeout(() => setDiaryError(""), 3000);
+    }
+  };
+
+  const handleDiaryResetReauth = async (e) => {
+    e.preventDefault();
+    setDiaryError("");
+    try {
+      const credential = EmailAuthProvider.credential(user.email, resetPasswordInput);
+      await reauthenticateWithCredential(user, credential);
+      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'diaryConfig'), { pin: null }, { merge: true });
+      setPinMode('setup1');
+      setResetPasswordInput("");
+      setDiaryPin(null);
+    } catch (err) {
+      setDiaryError("Authentication failed: " + err.message.replace('Firebase:', '').replace('auth/', ''));
+    }
+  };
+
+  const handleAddDiaryEntry = async (data) => {
+    if (!data.text.trim() || !user) return;
+    
+    const pad = (n) => n < 10 ? '0'+n : n;
+    const d = new Date();
+    const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+    const entryData = {
+      ...data,
+      dateStr,
+      createdAt: Date.now()
+    };
+
+    // Optimistic Update: instantly closes modal
+    setIsAddingDiary(false);
+
+    // Background save
+    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'diaryEntries'), entryData);
+  };
+
+  const deleteDiaryEntry = async (id) => {
+    if (id && user) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'diaryEntries', id));
+  };
+
+  const getDiaryStreak = () => {
+    const dates = [...new Set(diaryEntries.map(e => e.dateStr))].sort((a,b) => new Date(b) - new Date(a));
+    if(dates.length === 0) return 0;
+    
+    let streak = 0;
+    const pad = (n) => n < 10 ? '0'+n : n;
+    
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${pad(yesterday.getMonth()+1)}-${pad(yesterday.getDate())}`;
+
+    if (dates[0] !== todayStr && dates[0] !== yesterdayStr) {
+        return 0; // Streak broken
+    }
+
+    let expectedDate = new Date(dates[0]);
+    expectedDate.setHours(0,0,0,0);
+
+    for (const dStr of dates) {
+        const d = new Date(dStr);
+        d.setHours(0,0,0,0);
+        
+        if (d.getTime() === expectedDate.getTime()) {
+            streak++;
+            expectedDate.setDate(expectedDate.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+    return streak;
+  };
+
+
+  // --- COMPONENT HANDLERS ---
+  const handleScratchpadChange = async (val) => {
+    setScratchpad(val);
+    if (user) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'scratchpad'), { text: val }, { merge: true });
+  };
+
+  const addTask = async (e) => {
+    e.preventDefault();
+    if (!newTask.trim() || !user) return;
+    const data = { text: newTask, priority: taskPriority, completed: false, createdAt: Date.now() };
+    
+    // Optimistic Update
+    setNewTask('');
+    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'tasks'), data);
+  };
+
+  const toggleTask = async (task) => { if (user) await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', task.id), { completed: !task.completed }); };
+  const deleteTask = async (id) => { if (user) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', id)); };
+  
+  const addRoutine = async (e) => {
+    e.preventDefault();
+    if (!newRoutine.course || !user) return;
+    const data = { ...newRoutine };
+
+    // Optimistic Update
+    setNewRoutine({ day: 'Saturday', course: '', code: '', faculty: '', facultyFull: '', facultyContact: '', time: '', room: '', ramadanTime: '' });
+    setIsAddingRoutine(false);
+
+    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'routine'), data);
+  };
+  const deleteRoutine = async (id) => { if (user) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'routine', id)); };
+
+  const addLink = async (e) => {
+    e.preventDefault();
+    if (!newLink.title || !newLink.url || !user) return;
+    let url = newLink.url.startsWith('http') ? newLink.url : 'https://' + newLink.url;
+    const data = { ...newLink, url };
+
+    // Optimistic Update
+    setNewLink({ title: '', url: '', category: 'official' });
+    setIsAddingLink(false);
+
+    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'links'), data);
+  };
+  const deleteLink = async (id) => { if (user) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'links', id)); };
+
+  // --- NEW: TOGGLE STAR FEATURE ---
+  const toggleStarLink = async (link) => {
+    if (!user) return;
+    const isStarred = !!link.starred;
+    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'links', link.id), {
+      starred: !isStarred,
+      starredAt: !isStarred ? Date.now() : null
+    });
+  };
+
+  const addVaultLink = async (e) => {
+    e.preventDefault();
+    if (!newVaultLink.title || !newVaultLink.url || !user) return;
+    let url = newVaultLink.url.startsWith('http') ? newVaultLink.url : 'https://' + newVaultLink.url;
+    const data = { ...newVaultLink, url, createdAt: Date.now() };
+
+    // Optimistic Update
+    setNewVaultLink({ title: '', url: '', hint: '' });
+    setIsAddingVaultLink(false);
+
+    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'vaultLinks'), data);
+  };
+  const deleteVaultLink = async (id) => { if (id && user) await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'vaultLinks', id)); };
+
+
+  // --- SHARED UI SUB-COMPONENTS ---
+  const NavItem = ({ id, icon: Icon, label, onClick }) => (
+    <button 
+      onClick={() => { handleTabChange(id); if (onClick) onClick(); }} 
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative w-full ${activeTab === id ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 translate-x-1 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-white/40 dark:hover:bg-slate-800/40 font-medium'} outline-none`}
+    >
+      <Icon size={18} /> 
+      <span className="text-sm capitalize">{label}</span>
+    </button>
+  );
+
+  const CreditSection = () => (
+    <div className="mt-8 p-5 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 shadow-sm group transition-all hover:shadow-md">
+      <style>{`
+        @keyframes heartPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.15); opacity: 0.8; }
+        }
+        .animate-heart { animation: heartPulse 2s ease-in-out infinite; }
+      `}</style>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">StudyFlow UIU</span>
+        <span className="bg-orange-100/80 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">v 9.11</span>
+      </div>
+      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+        Developed with <span className="inline-flex items-center justify-center animate-heart text-red-500 mx-0.5"><Heart size={12} fill="currentColor" /></span> by <span className="text-slate-800 dark:text-white font-bold">Moheuddin Sikder Saikat</span> (CSE 242)
+      </p>
+      <div className="pt-3 border-t border-slate-200/50 dark:border-slate-700/50">
+        <a href="mailto:msaikat2420035@bscse.uiu.ac.bd" className="flex items-center gap-2 text-xs font-semibold text-orange-500 hover:text-orange-600 hover:underline transition-colors break-all outline-none">
+          <Mail size={14} className="shrink-0" /> Contact for feedback
+        </a>
+      </div>
+    </div>
+  );
+
+  // --- DIARY SUB-COMPONENTS ---
+  const renderDiaryPinPad = () => (
+    <div className="w-full max-w-sm mx-auto animate-in zoom-in-95 duration-300 flex flex-col items-center transform-gpu">
+      <div className="w-16 h-16 bg-pink-50/50 dark:bg-pink-900/30 backdrop-blur-md rounded-full flex items-center justify-center text-pink-50 mb-6 shadow-sm border border-pink-200/50 dark:border-pink-800/50">
+        <LockKeyhole size={32} />
+      </div>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2 text-center">
+        {pinMode === 'unlock' ? 'Enter PIN' : 
+         pinMode === 'setup1' ? 'Create a 4-digit PIN' : 
+         pinMode === 'setup2' ? 'Confirm your PIN' : 
+         pinMode === 'settings_auth' ? 'Enter Current PIN' : 
+         pinMode === 'settings_new' ? 'Enter New PIN' : 'Security'}
+      </h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 text-center">
+        Secure your personal diary
+      </p>
+
+      <div className="flex gap-4 justify-center mb-10 h-4 items-center">
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} className={`w-4 h-4 rounded-full transition-all duration-300 ${pinInput.length > i ? 'bg-pink-500 scale-110 shadow-md shadow-pink-500/40' : 'bg-slate-300/50 dark:bg-slate-700/50'}`} />
+        ))}
+      </div>
+
+      {diaryError && (
+        <p className="text-sm font-semibold text-red-500 mb-6 text-center animate-in slide-in-from-top-2">
+          {diaryError}
+        </p>
+      )}
+
+      <div className="grid grid-cols-3 gap-y-6 gap-x-10 w-[280px]">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+          <button key={num} onClick={() => handlePinInput(num.toString())} className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-semibold text-slate-700 dark:text-slate-200 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md hover:bg-white/60 dark:hover:bg-slate-700/60 hover:-translate-y-1 hover:shadow-lg transition-all active:scale-95 outline-none border border-white/50 dark:border-white/10">{num}</button>
+        ))}
+        <div />
+        <button onClick={() => handlePinInput('0')} className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-semibold text-slate-700 dark:text-slate-200 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md hover:bg-white/60 dark:hover:bg-slate-700/60 hover:-translate-y-1 hover:shadow-lg transition-all active:scale-95 outline-none border border-white/50 dark:border-white/10">0</button>
+        <button onClick={() => setPinInput(p => p.slice(0, -1))} className="w-16 h-16 rounded-full flex items-center justify-center text-slate-500 hover:bg-white/40 dark:hover:bg-slate-800/40 hover:-translate-y-1 transition-all active:scale-95 outline-none"><Delete size={28} /></button>
+      </div>
+      
+      {pinMode === 'unlock' && diaryPin && (
+        <button onClick={() => { setPinMode('reset'); setDiaryError(""); setPinInput(""); }} className="mt-10 text-sm font-medium text-slate-500 hover:text-pink-500 transition-colors outline-none">Forgot PIN?</button>
+      )}
+      {pinMode.includes('settings') && (
+        <button onClick={() => { setPinMode('unlock'); setDiaryError(""); setPinInput(""); setIsDiarySettingsOpen(false); }} className="mt-10 text-sm font-medium text-slate-500 hover:text-pink-500 transition-colors outline-none">Cancel</button>
+      )}
+    </div>
+  );
+
+  const renderDiaryResetAuth = () => (
+    <div className="w-full max-w-sm mx-auto animate-in zoom-in-95 duration-300 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl mt-12 transform-gpu">
+       <div className="w-16 h-16 bg-red-50/80 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500 mb-6 mx-auto"><ShieldAlert size={32} /></div>
+       <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2 text-center">Verify Identity</h2>
+       <p className="text-sm text-slate-500 mb-6 text-center leading-relaxed">Enter your StudyFlow account password to reset your diary PIN.</p>
+       
+       <form onSubmit={handleDiaryResetReauth} className="space-y-4">
+         <div className="relative group">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-pink-500 transition-colors" size={18} />
+            <input required type="password" placeholder="Account Password" value={resetPasswordInput} onChange={e => setResetPasswordInput(e.target.value)} className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 font-medium text-sm focus:ring-2 focus:ring-pink-500/50 dark:text-white outline-none transition-all shadow-sm" />
+         </div>
+         {diaryError && <div className="bg-red-50/80 dark:bg-red-900/20 p-3 rounded-xl border border-red-200/50 dark:border-red-900/30 text-sm font-medium text-red-600 text-center leading-tight">{diaryError}</div>}
+         
+         <button type="submit" className="w-full bg-pink-500/90 backdrop-blur-md text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-pink-500/30 hover:bg-pink-600 transition-all active:scale-95 flex items-center justify-center outline-none">Verify & Reset PIN</button>
+       </form>
+       
+       <button onClick={() => { setPinMode('unlock'); setDiaryError(""); setResetPasswordInput(""); }} className="mt-6 w-full text-center text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors outline-none">Back to Lock Screen</button>
+    </div>
+  );
+
+
+  // --- RENDER LOGIC ---
+  if (authLoading) {
+    return (
+      <div className="h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center font-sans">
+        <style dangerouslySetInnerHTML={{__html: `
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+          * { font-family: 'Plus Jakarta Sans', sans-serif; }
+        `}} />
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+           <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-500/30"><School size={32} /></div>
+           <p className="text-sm font-semibold text-slate-500">Loading StudyFlow...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen relative flex items-center justify-center p-6 transition-colors duration-500 font-sans overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <style dangerouslySetInnerHTML={{__html: `
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+          * { font-family: 'Plus Jakarta Sans', sans-serif; }
+        `}} />
+        
+        {/* Ambient Glass Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-orange-400/30 dark:bg-orange-600/20 rounded-full blur-[100px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-400/30 dark:bg-blue-600/20 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="w-full max-w-md space-y-8 animate-in fade-in duration-500 relative z-10 transform-gpu">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500/90 backdrop-blur-md rounded-2xl text-white shadow-xl shadow-orange-500/30 mb-6 border border-white/20"><School size={32} /></div>
+            <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight">StudyFlow</h1>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Your Personal Academic Workspace</p>
+          </div>
+          
+          <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl relative overflow-hidden">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-6 text-center">{authMode === 'login' ? 'Welcome Back' : 'Create Account'}</h2>
+            
+            <form onSubmit={handleAuth} className="space-y-4 relative z-10">
+              {authMode === 'signup' && (
+                <div className="relative group">
+                  <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18} />
+                  <input required type="text" placeholder="Your Name" className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 font-medium text-sm focus:ring-2 focus:ring-orange-500/50 dark:text-white outline-none transition-all shadow-sm" value={authData.username} onChange={e => setAuthData({...authData, username: e.target.value})} />
+                </div>
+              )}
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18} />
+                <input required type="email" placeholder="Email Address" className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 font-medium text-sm focus:ring-2 focus:ring-orange-500/50 dark:text-white outline-none transition-all shadow-sm" value={authData.email} onChange={e => setAuthData({...authData, email: e.target.value})} />
+              </div>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18} />
+                <input required type="password" placeholder="Password" className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 font-medium text-sm focus:ring-2 focus:ring-orange-500/50 dark:text-white outline-none transition-all shadow-sm" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} />
+              </div>
+              
+              {authError && <div className="bg-red-50/80 dark:bg-red-900/20 p-3 rounded-xl border border-red-200/50 dark:border-red-900/30 text-sm font-medium text-red-600 leading-tight">{authError}</div>}
+              {resetSent && <div className="bg-emerald-50/80 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-200/50 dark:border-emerald-900/30 text-sm font-medium text-emerald-600 text-center">Password reset link sent to your email.</div>}
+              
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full bg-orange-500/90 backdrop-blur-md text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 outline-none border border-white/20"
+              >
+                {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : (authMode === 'login' ? 'Sign In' : 'Sign Up')}
+              </button>
+            </form>
+            
+            <div className="mt-6 flex flex-col items-center gap-3 relative z-10 text-center">
+              <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError(''); }} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-orange-500 transition-colors outline-none">{authMode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}</button>
+              {authMode === 'login' && <button onClick={handleForgotPassword} className="text-xs font-medium text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors outline-none">Forgot password?</button>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-hidden relative">
+      {/* CUSTOM FONT & KEYFRAMES & GLOBAL CSS */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        * { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        .animate-glow { animation: glowCustom 2.5s ease-in-out infinite; }
+        @keyframes glowCustom {
+          0%, 100% { opacity: 1; filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.8)); text-shadow: 0 0 10px rgba(249,115,22,0.8); }
+          50% { opacity: 0.5; filter: drop-shadow(0 0 0px rgba(249, 115, 22, 0)); text-shadow: none; }
+        }
+        
+        /* Modern Glassy Thin Scrollbars Matching Orange Theme */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(249, 115, 22, 0.4);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(249, 115, 22, 0.6);
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(249, 115, 22, 0.5);
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(249, 115, 22, 0.8);
+        }
+      `}} />
+
+      {/* Ambient Glass Background for the Entire App */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-orange-400/20 dark:bg-orange-500/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[40%] left-[50%] w-[400px] h-[400px] bg-purple-400/20 dark:bg-purple-500/10 rounded-full blur-[120px]" />
+      </div>
+      
+      {/* SIDEBARS */}
+      <aside className={`fixed inset-y-0 left-0 z-[100] lg:relative lg:translate-x-0 w-72 lg:w-64 bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-white/50 dark:border-white/10 flex flex-col p-6 transition-transform duration-300 overflow-y-auto custom-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${mobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+        <div className="flex items-center justify-between mb-8 px-2 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-orange-500/90 backdrop-blur-md rounded-lg flex items-center justify-center text-white shadow-lg border border-white/20"><School size={18} /></div>
+            <h1 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white">StudyFlow</h1>
+          </div>
+          <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-slate-500 hover:text-orange-500 outline-none"><X size={20} /></button>
+        </div>
+        <nav className="flex flex-col gap-1.5 flex-grow mb-6 relative z-10">
+          <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" onClick={() => setMobileSidebarOpen(false)} />
+          <NavItem id="tasks" icon={CheckCircle2} label="Tasks" onClick={() => setMobileSidebarOpen(false)} />
+          <NavItem id="routine" icon={Calendar} label="Routine" onClick={() => setMobileSidebarOpen(false)} />
+          <NavItem id="links" icon={LinkIcon} label="Link Vault" onClick={() => setMobileSidebarOpen(false)} />
+          <NavItem id="diary" icon={Book} label="Personal Diary" onClick={() => setMobileSidebarOpen(false)} />
+        </nav>
+        
+        <div className="relative z-10"><CreditSection /></div>
+
+        <div className="mt-auto space-y-4 pt-6 border-t border-slate-200/50 dark:border-slate-700/50 relative z-10">
+           <div className="space-y-3 px-1">
+             <button onClick={() => setRamadanMode(!ramadanMode)} className="w-full flex items-center justify-between group outline-none">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300"><MoonStar size={16} className="text-indigo-400" /> Ramadan Mode</div>
+                <div className={`w-10 h-5 rounded-full p-0.5 transition-colors shadow-inner ${ramadanMode ? 'bg-indigo-500/90 backdrop-blur-sm' : 'bg-slate-300/50 dark:bg-slate-700/50'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${ramadanMode ? 'translate-x-5' : 'translate-x-0'}`} /></div>
+             </button>
+             <button onClick={toggleNotifications} className="w-full flex items-center justify-between group outline-none">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300"><Bell size={16} className={notificationsEnabled ? "text-orange-500" : "text-slate-400"} /> Class Alerts</div>
+                <div className={`w-10 h-5 rounded-full p-0.5 transition-colors shadow-inner ${notificationsEnabled ? 'bg-orange-500/90 backdrop-blur-sm' : 'bg-slate-300/50 dark:bg-slate-700/50'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${notificationsEnabled ? 'translate-x-5' : 'translate-x-0'}`} /></div>
+             </button>
+           </div>
+           <div className="pt-4 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between px-1">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-md flex items-center justify-center text-slate-500 border border-white/40 dark:border-white/10 shadow-sm"><UserCircle size={16} /></div>
+                <div className="overflow-hidden"><p className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[120px]">{user.displayName}</p></div>
+              </div>
+              <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors outline-none"><LogOut size={16} /></button>
+           </div>
+        </div>
+      </aside>
+
+      {mobileSidebarOpen && <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[99] lg:hidden" onClick={() => setMobileSidebarOpen(false)} />}
+
+      {/* Main scrolling container - WebkitOverflowScrolling for native iOS momentum scroll */}
+      <main className="flex-grow overflow-y-auto relative bg-transparent custom-scrollbar z-10 transform-gpu" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <header className="sticky top-0 z-50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl px-6 lg:px-8 py-4 flex justify-between items-center border-b border-white/50 dark:border-white/10 shadow-sm transform-gpu">
+          <div className="flex items-center gap-3">
+             <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-orange-500 transition-colors outline-none"><Menu size={22} /></button>
+             <h2 className="text-lg font-bold text-slate-800 dark:text-white capitalize">{activeTab}</h2>
+          </div>
+          <div className="flex items-center gap-2 lg:gap-4">
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full border border-white/60 dark:border-white/10 shadow-sm transition-all text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 outline-none">{darkMode ? <Sun size={16} className="text-orange-500" /> : <Moon size={16} className="text-indigo-400" />}</button>
+            <div className="relative">
+              <button onClick={() => setIsProfileModalOpen(!isProfileModalOpen)} className="p-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full border border-white/60 dark:border-white/10 shadow-sm transition-all text-slate-600 dark:text-slate-400 hover:text-orange-500 outline-none"><UserCircle size={16} /></button>
+              {isProfileModalOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsProfileModalOpen(false)} />
+                  <div className="absolute right-0 mt-3 w-64 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/50 dark:border-white/10 rounded-2xl shadow-2xl p-4 z-50 animate-in zoom-in-95 duration-200">
+                    <div className="mb-4 pb-4 border-b border-slate-200/50 dark:border-slate-700/50">
+                      <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{user.displayName}</p>
+                      <p className="text-xs font-medium text-slate-500 truncate">{user.email}</p>
+                    </div>
+                    <button onClick={() => { setIsVaultOpen(true); setIsProfileModalOpen(false); }} className="w-full flex items-center gap-3 p-2.5 mb-1 hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 rounded-xl transition-all font-semibold text-sm outline-none"><Vault size={16} className="text-indigo-500" /> Hidden Vault</button>
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 p-2.5 text-red-500 hover:bg-red-50/50 dark:hover:bg-red-900/20 rounded-xl transition-all font-semibold text-sm outline-none border-none">
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            {/* Real-time Clock */}
+            <div className="px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-white/60 dark:border-white/10 shadow-sm text-xs font-bold text-slate-700 flex items-center gap-2 hidden sm:flex tabular-nums">
+              <Clock size={14} className="text-orange-500" /> <span className="dark:text-slate-300">{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}</span>
+            </div>
+          </div>
+        </header>
+
+        {/* --- SMOOTH TAB TRANSITION WRAPPER --- */}
+        <div className="px-6 lg:px-8 py-8 max-w-7xl mx-auto space-y-8 pb-32">
+          <div key={activeTab} className="animate-in fade-in duration-200 ease-out transform-gpu">
+            
+            {activeTab === 'dashboard' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* UPDATED WELCOME BANNER (GLASS) */}
+                <div className="lg:col-span-12 mb-2 animate-in slide-in-from-top-4 duration-500">
+                  <div className="bg-white/60 dark:bg-slate-900/60 p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 backdrop-blur-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5 shadow-xl shadow-slate-200/20 dark:shadow-black/20 group">
+                      <div className="p-4 bg-white/60 dark:bg-orange-500/20 backdrop-blur-md text-orange-600 dark:text-orange-400 rounded-2xl border border-white/60 dark:border-orange-500/30 shadow-sm group-hover:scale-105 transition-transform duration-300 shrink-0">
+                        <School size={32} />
+                      </div>
+                      <div className="flex-grow w-full">
+                        <h2 className="text-xl lg:text-2xl font-extrabold text-slate-800 dark:text-white leading-tight mb-1.5 flex items-center gap-2">
+                          Welcome back, {user?.displayName?.split(' ')[0] || 'Student'}! <span>👋</span>
+                        </h2>
+                        <div className="text-sm lg:text-base font-semibold text-slate-600 dark:text-slate-400 block sm:inline-block mt-1">
+                          <span className="mr-1.5 normal-case font-medium">StudyFlow is here to help you by-</span>
+                          <span className="text-lg lg:text-xl transition-all">
+                            <TypewriterEffect items={TYPEWRITER_ITEMS} />
+                          </span>
+                        </div>
+                      </div>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-8 space-y-6">
+                  
+                  {/* INSPIRATION QUOTE GLOWING ER JONNO (GLASS) */}
+                  <div className="relative overflow-hidden rounded-3xl bg-slate-900/80 backdrop-blur-2xl p-8 text-white shadow-xl border border-white/10">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/20 rounded-full blur-[80px] -mr-32 -mt-32" />
+                    
+                    <div className="relative z-10 flex flex-col md:flex-row gap-6 items-center md:items-start justify-between">
+                      <div className="flex-grow w-full">
+                        <div className="flex items-center gap-2 mb-4 text-orange-400 animate-glow">
+                          <Quote size={20} className="drop-shadow-md" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Daily Inspiration</span>
+                        </div>
+                        <div className="min-h-[80px] flex flex-col justify-center">
+                          {!quoteRevealed ? (
+                            <div>
+                              <h3 className="text-lg font-bold text-slate-300 italic mb-5">"Unlock today's motivation to get started."</h3>
+                              <button onClick={handleRevealQuote} className="inline-flex items-center gap-2 bg-orange-500/90 backdrop-blur-md text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-600 transition-all outline-none shadow-lg shadow-orange-500/30 active:scale-95 border border-white/20"><Zap size={16} /> Reveal Quote</button>
+                            </div>
+                          ) : (
+                            <div className="animate-in slide-in-from-bottom-2 duration-500">
+                              <h3 className="text-xl md:text-2xl font-bold mb-3 leading-relaxed">"{dailyQuote}"</h3>
+                              <p className="text-xs font-semibold text-slate-400 flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-400" /> Daily quote unlocked</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Today's Routine Preview (GLASS) */}
+                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl p-6 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/20 hover:shadow-2xl transition-shadow">
+                      <h3 className="text-sm font-extrabold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><Calendar size={16} className="text-blue-500" /> Today's Classes</h3>
+                      <div className="space-y-3">
+                        {currentDayClassesList.length > 0 ? currentDayClassesList.map(r => (
+                          <div key={r.id} className="flex items-center justify-between p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/10 shadow-sm">
+                            <div className="min-w-0 pr-2">
+                              {/* Course text & info matching clean styling (plus faculty) */}
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate leading-none mb-1.5">{r.course}</p>
+                              <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-none">{r.code} • Room {r.room}{r.faculty ? ` • ${r.faculty}` : ''}</p>
+                            </div>
+                            <div className="text-right shrink-0 text-xs font-bold text-blue-600 dark:text-blue-400">{ramadanMode && r.ramadanTime ? r.ramadanTime : r.time}</div>
+                          </div>
+                        )) : <div className="py-6 text-center text-sm font-medium text-slate-500">No classes scheduled for today. Enjoy!</div>}
+                      </div>
+                    </div>
+
+                    {/* Tasks Preview (GLASS) */}
+                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl p-6 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/20 hover:shadow-2xl transition-shadow">
+                      <h3 className="text-sm font-extrabold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-500" /> Pending Tasks</h3>
+                      <div className="space-y-3">
+                        {tasks.filter(t => !t.completed).slice(0, 4).map(t => (
+                          <div key={t.id} className="flex items-start gap-3 p-3 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/10 shadow-sm">
+                            <div className={`mt-1 w-2.5 h-2.5 rounded-full shrink-0 shadow-sm ${t.priority === 'high' ? 'bg-red-500' : t.priority === 'medium' ? 'bg-orange-500' : 'bg-blue-500'}`} />
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-tight">{t.text}</p>
+                          </div>
+                        ))}
+                        {tasks.filter(t => !t.completed).length === 0 && <div className="py-6 text-center text-sm font-medium text-slate-500">All caught up! No pending tasks.</div>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Scratchpad (GLASS) */}
+                <div className="lg:col-span-4">
+                  <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl p-6 rounded-3xl border border-white/50 dark:border-white/10 h-full min-h-[300px] flex flex-col shadow-xl shadow-slate-200/20 dark:shadow-black/20 hover:shadow-2xl transition-shadow">
+                      <h3 className="text-sm font-extrabold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><StickyNote size={16} className="text-indigo-500" /> Scratchpad</h3>
+                      <textarea 
+                        value={scratchpad} 
+                        onChange={(e) => handleScratchpadChange(e.target.value)} 
+                        placeholder="Note down quick thoughts here..." 
+                        className="flex-grow w-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl p-4 text-sm font-medium border border-white/60 dark:border-white/10 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 resize-none outline-none text-slate-800 dark:text-slate-200 transition-all leading-relaxed custom-scrollbar shadow-inner" 
+                      />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'tasks' && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl p-6 md:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/20">
+                  <h3 className="text-lg font-extrabold text-slate-800 dark:text-white mb-4">Add New Task</h3>
+                  <form onSubmit={addTask} className="space-y-4">
+                    <input required type="text" value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="What needs to be done?" className="w-full px-5 py-3.5 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-white/60 dark:border-white/10 text-sm font-semibold focus:ring-2 focus:ring-orange-500/50 dark:text-white outline-none shadow-inner" />
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                      
+                      {/* TASK PRIORITY SWITCH */}
+                      <div className="flex bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1.5 rounded-xl w-full sm:w-auto gap-1 border border-white/40 dark:border-white/5 shadow-sm">
+                        {['low', 'medium', 'high'].map(p => {
+                          let activeClass = 'text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200';
+                          if (taskPriority === p) {
+                            if (p === 'low') activeClass = 'bg-blue-500/90 text-white shadow-md scale-105';
+                            if (p === 'medium') activeClass = 'bg-orange-500/90 text-white shadow-md scale-105';
+                            if (p === 'high') activeClass = 'bg-red-500/90 text-white shadow-md scale-105';
+                          }
+                          return (
+                            <button key={p} type="button" onClick={() => setTaskPriority(p)} 
+                              className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold capitalize transition-all duration-300 outline-none ${activeClass}`}>
+                              {p}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button type="submit" className="w-full sm:w-auto bg-orange-500/90 backdrop-blur-md hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/30 transition-all active:scale-95 flex items-center justify-center gap-2 outline-none border border-white/20"><Plus size={18} /> Add Task</button>
+                    </div>
+                  </form>
+                </div>
+
+                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 divide-y divide-white/40 dark:divide-white/5 overflow-hidden shadow-xl shadow-slate-200/20 dark:shadow-black/20">
+                  {tasks.length > 0 ? tasks.map(t => (
+                    <div key={t.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-white/40 dark:hover:bg-slate-800/40 transition-colors">
+                      <button onClick={() => toggleTask(t)} className="shrink-0 outline-none text-slate-400 dark:text-slate-500 hover:text-emerald-500 transition-colors">
+                        {t.completed ? <CheckCircle2 size={24} className="text-emerald-500" /> : <Circle size={24} />}
+                      </button>
+                      <div className="flex-grow">
+                        <p className={`text-sm transition-all ${t.completed ? 'line-through text-slate-500 dark:text-slate-400' : 'text-slate-800 dark:text-slate-200 font-bold'}`}>{t.text}</p>
+                      </div>
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 shadow-sm ${t.priority === 'high' ? 'bg-red-500' : t.priority === 'medium' ? 'bg-orange-500' : 'bg-blue-500'}`} />
+                      <button onClick={() => deleteTask(t.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all outline-none"><Trash2 size={18} /></button>
+                    </div>
+                  )) : (
+                    <div className="p-16 text-center text-slate-500 text-sm font-medium">You have no tasks. Add one above!</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'routine' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl p-6 md:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/20 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500/80"></div>
+                  <div className="relative z-10">
+                    <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-1">Weekly Schedule</h3>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Manage your classes across the week</p>
+                  </div>
+                  <button onClick={() => setIsAddingRoutine(true)} className="relative z-10 bg-blue-500/90 backdrop-blur-md text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-blue-500/30 hover:bg-blue-600 transition-colors outline-none border border-white/20"><Plus size={18} /> Add Class</button>
+                </div>
+
+                {isAddingRoutine && (
+                  <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl p-6 md:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-4xl mx-auto animate-in zoom-in-95 relative z-[60]">
+                    <button onClick={() => setIsAddingRoutine(false)} className="absolute top-6 right-6 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors outline-none"><X size={20} /></button>
+                    <h3 className="text-lg font-extrabold text-slate-800 dark:text-white mb-6">New Class Detail</h3>
+                    <form onSubmit={addRoutine} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <input required placeholder="Course Name" value={newRoutine.course} onChange={e => setNewRoutine({...newRoutine, course: e.target.value})} className="p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 shadow-sm focus:border-blue-500 outline-none dark:text-white" />
+                      <input placeholder="Course Code" value={newRoutine.code} onChange={e => setNewRoutine({...newRoutine, code: e.target.value})} className="p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 shadow-sm focus:border-blue-500 outline-none dark:text-white" />
+                      <input placeholder="Faculty Initial" value={newRoutine.faculty} onChange={e => setNewRoutine({...newRoutine, faculty: e.target.value})} className="p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 shadow-sm focus:border-blue-500 outline-none dark:text-white" />
+                      
+                      <GlassSelect 
+                        value={newRoutine.day} 
+                        onChange={val => setNewRoutine({...newRoutine, day: val})} 
+                        options={DAYS.map(d => ({value: d, label: d}))} 
+                      />
+
+                      <input placeholder="Time (e.g., 10:00 AM)" value={newRoutine.time} onChange={e => setNewRoutine({...newRoutine, time: e.target.value})} className="p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 shadow-sm focus:border-blue-500 outline-none dark:text-white" />
+                      <input placeholder="Ramadan Time" value={newRoutine.ramadanTime} onChange={e => setNewRoutine({...newRoutine, ramadanTime: e.target.value})} className="p-3.5 bg-indigo-50/50 dark:bg-indigo-900/30 backdrop-blur-md rounded-xl text-sm font-semibold border border-indigo-200/50 dark:border-indigo-800/30 shadow-sm focus:border-indigo-500 outline-none dark:text-white" />
+                      <input placeholder="Room Number" value={newRoutine.room} onChange={e => setNewRoutine({...newRoutine, room: e.target.value})} className="p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 shadow-sm focus:border-blue-500 outline-none dark:text-white" />
+                      <div className="lg:col-span-4 flex justify-end mt-2">
+                        <button type="submit" className="bg-blue-500/90 backdrop-blur-md hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-500/30 border border-white/20 transition-colors outline-none active:scale-95">Save Class</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {DAYS.map(day => { 
+                    const classes = routine.filter(r => r.day === day); 
+                    const style = DAY_STYLES[day]; 
+                    return (
+                      <div key={day} className={`rounded-3xl border overflow-hidden shadow-xl shadow-slate-200/20 dark:shadow-black/20 transition-all duration-200 hover:shadow-2xl ${style.bg} ${style.border}`}>
+                        <div className="px-5 py-4 border-b border-black/5 dark:border-white/10 flex items-center justify-between relative bg-white/20 dark:bg-black/10">
+                          <span className={`text-sm font-extrabold ${style.accent}`}>{day}</span>
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md px-2.5 py-1 rounded-md shadow-sm border border-white/40 dark:border-white/10">{classes.length}</span>
+                        </div>
+                        <div className="p-4 space-y-3 min-h-[120px]">
+                          {classes.length === 0 ? (
+                             <p className="text-xs font-medium text-center text-slate-500 dark:text-slate-400 py-6">Free day!</p>
+                          ) : (
+                            classes.map(c => (
+                              <div key={c.id} className="group p-4 rounded-2xl relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/50 dark:border-white/10 shadow-sm transition-all hover:border-white/80 dark:hover:border-white/20 hover:-translate-y-0.5">
+                                <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 mb-1.5 truncate">{c.course}</p>
+                                <div className="flex flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                                  <span className={`flex items-center gap-1.5 font-bold ${style.accent}`}><Clock size={12} /> {ramadanMode && c.ramadanTime ? c.ramadanTime : c.time}</span>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="flex items-center gap-1"><MapPin size={12} /> Room {c.room}</span>
+                                    {c.faculty && <span>• {c.faculty}</span>}
+                                  </div>
+                                </div>
+                                <button onClick={() => deleteRoutine(c.id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-all outline-none bg-white/80 dark:bg-slate-700/80 backdrop-blur-md rounded-md border border-white/50 dark:border-white/10 shadow-sm"><Trash2 size={14} /></button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ); 
+                  })}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'links' && (
+               <div className="space-y-6">
+                  <div className="flex justify-between items-center bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl p-6 md:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/20 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500/80"></div>
+                    <div className="relative z-10">
+                      <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-1">Link Vault</h3>
+                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Organize your important academic URLs</p>
+                    </div>
+                    <button onClick={() => setIsAddingLink(true)} className="relative z-10 bg-emerald-500/90 backdrop-blur-md text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 transition-colors active:scale-95 outline-none border border-white/20"><Plus size={18} /> Add Link</button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {CATEGORY_ORDER.map(k => { 
+                      const cat = CATEGORIES[k.toUpperCase()]; 
+                      
+                      // --- MODIFIED SORTING LOGIC ---
+                      const list = links.filter(l => l.category === k).sort((a, b) => {
+                        // Jodi duitai star kora thake, tahole jeta age star kora hoyeche seta age asbe (ascending starredAt)
+                        if (a.starred && b.starred) {
+                           return (a.starredAt || 0) - (b.starredAt || 0);
+                        }
+                        // Jodi shudhu 'a' star kora thake, tahole 'a' age jabe
+                        if (a.starred) return -1;
+                        // Jodi shudhu 'b' star kora thake, tahole 'b' age jabe
+                        if (b.starred) return 1;
+                        
+                        return 0; // Kono tai star na thakle default order
+                      });
+
+                      return (
+                        <div key={k} className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 overflow-hidden flex flex-col h-[380px] shadow-xl shadow-slate-200/20 dark:shadow-black/20 hover:shadow-2xl transition-all duration-200">
+                          <div className={`px-5 py-4 flex items-center justify-between border-b border-white/40 dark:border-white/10 backdrop-blur-md ${cat.bg}`}>
+                            <div className="flex items-center gap-3">
+                              <cat.icon className={cat.color} size={18} />
+                              <h4 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">{cat.label}</h4>
+                            </div>
+                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded-md shadow-sm border border-white/40 dark:border-white/5">{list.length}</span>
+                          </div>
+                          <div className="p-3 space-y-2 overflow-y-auto flex-grow custom-scrollbar">
+                            {list.length === 0 ? (
+                               <div className="h-full flex items-center justify-center text-xs font-medium text-slate-500">No links here yet.</div>
+                            ) : (
+                              list.map(l => (
+                                // --- MODIFIED LINK CARD DESIGN FOR GOLDEN GLOW ---
+                                <div key={l.id} className={`group flex items-center justify-between p-3 rounded-xl border transition-all hover:-translate-y-0.5 shadow-sm hover:shadow-md ${l.starred ? 'border-amber-300/60 dark:border-amber-500/40 bg-gradient-to-r from-amber-50/40 to-transparent dark:from-amber-500/10 dark:to-transparent shadow-[0_0_12px_rgba(251,191,36,0.15)]' : 'border-transparent hover:border-white/60 dark:hover:border-white/10 hover:bg-white/50 dark:hover:bg-slate-800/50'}`}>
+                                  <div className="flex items-center gap-3 overflow-hidden outline-none flex-grow pr-2">
+                                    
+                                    {/* --- NEW STAR BUTTON --- */}
+                                    <button 
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStarLink(l); }} 
+                                      className={`shrink-0 p-1.5 rounded-lg transition-all outline-none ${l.starred ? 'text-amber-500 hover:text-amber-600 bg-amber-100/50 dark:bg-amber-900/30' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 group-hover:text-amber-400/70 hover:bg-white/60 dark:hover:bg-slate-700/60'}`}
+                                    >
+                                      <Star size={16} className={l.starred ? "fill-amber-500" : ""} />
+                                    </button>
+
+                                    <a href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 overflow-hidden outline-none flex-grow">
+                                      <div className={`p-2 backdrop-blur-md rounded-lg transition-colors shrink-0 shadow-sm border border-white/40 dark:border-white/5 ${l.starred ? 'bg-amber-100/80 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-700/50' : 'bg-white/60 dark:bg-slate-800/60 text-slate-500 group-hover:text-emerald-500 group-hover:bg-emerald-50/80 dark:group-hover:bg-emerald-500/20'}`}>
+                                        <ExternalLink size={14} />
+                                      </div>
+                                      <div className="overflow-hidden">
+                                        <p className={`font-bold text-sm truncate ${l.starred ? 'text-amber-700 dark:text-amber-300' : 'text-slate-800 dark:text-slate-200'}`}>{l.title}</p>
+                                        <p className={`text-xs font-medium truncate mt-0.5 ${l.starred ? 'text-amber-600/70 dark:text-amber-400/70' : 'text-slate-500 dark:text-slate-400'}`}>{l.url.replace(/^https?:\/\//, '')}</p>
+                                      </div>
+                                    </a>
+                                  </div>
+                                  <button onClick={() => deleteLink(l.id)} className="shrink-0 opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all outline-none"><Trash2 size={16} /></button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      ); 
+                    })}
+                  </div>
+               </div>
+            )}
+
+            {activeTab === 'diary' && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                {!diaryPin || !isDiaryUnlocked ? (
+                  <div className="pt-10">
+                     {pinMode === 'reset' ? renderDiaryResetAuth() : renderDiaryPinPad()}
+                  </div>
+                ) : (
+                  <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-slate-200/20 dark:shadow-black/20 overflow-hidden relative min-h-[600px] flex flex-col">
+                    
+                    {/* BEAUTIFUL GRADIENT DIARY HEADER (GLASS) */}
+                    <div className="px-6 md:px-8 py-8 bg-gradient-to-r from-pink-100/40 via-purple-50/40 to-indigo-50/40 dark:from-pink-900/20 dark:via-purple-900/20 dark:to-indigo-900/20 backdrop-blur-md border-b border-white/50 dark:border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-20">
+                       <div className="flex flex-col gap-1 relative z-10">
+                          <h3 className="text-xl font-extrabold text-slate-800 dark:text-white">Personal Diary</h3>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Private thoughts and reflections</p>
+                       </div>
+                       <div className="flex items-center gap-3 w-full sm:w-auto relative z-10">
+                          <div className="flex bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1.5 rounded-xl w-full sm:w-auto gap-1 shadow-sm border border-white/60 dark:border-white/10">
+                            <button onClick={() => setDiaryView('entries')} className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all ${diaryView === 'entries' ? 'bg-white/80 dark:bg-slate-700/80 text-pink-500 shadow-sm scale-105' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>Entries</button>
+                            <button onClick={() => setDiaryView('insights')} className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all ${diaryView === 'insights' ? 'bg-white/80 dark:bg-slate-700/80 text-pink-500 shadow-sm scale-105' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>Insights</button>
+                          </div>
+                          <div className="relative shrink-0">
+                            <button onClick={() => setIsDiarySettingsOpen(!isDiarySettingsOpen)} className="p-2.5 text-slate-600 dark:text-slate-400 hover:text-pink-500 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md hover:bg-white/80 dark:hover:bg-slate-700/80 rounded-xl transition-colors outline-none shadow-sm border border-white/60 dark:border-white/10"><SettingsIcon size={18} /></button>
+                            {isDiarySettingsOpen && (
+                              <>
+                                <div className="fixed inset-0 z-30" onClick={() => setIsDiarySettingsOpen(false)} />
+                                <div className="absolute right-0 top-full mt-2 w-48 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/50 dark:border-white/10 rounded-2xl shadow-xl p-2 z-40 animate-in zoom-in-95">
+                                   <button onClick={() => { setPinMode('settings_auth'); setIsDiaryUnlocked(false); }} className="w-full text-left px-4 py-2.5 text-sm font-bold text-slate-800 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60 rounded-xl transition-colors outline-none flex items-center gap-2"><LockKeyhole size={16} /> Change PIN</button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                       </div>
+                    </div>
+
+                    {diaryView === 'entries' && (
+                      <div className="flex flex-col md:flex-row flex-grow relative z-10 bg-transparent animate-in fade-in duration-300">
+                        
+                        {/* Left Side: Large Date Selector */}
+                        <div className="md:w-32 shrink-0 border-b md:border-b-0 md:border-r border-white/40 dark:border-white/5 flex flex-row md:flex-col items-center justify-between md:justify-start py-4 md:py-8 px-6 md:px-0 gap-4 bg-white/20 dark:bg-black/10 backdrop-blur-sm">
+                           <button onClick={() => { const d = new Date(selectedDiaryDate); d.setDate(d.getDate() - 1); setSelectedDiaryDate(d); }} className="p-2 text-slate-500 hover:text-pink-500 transition-colors bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/50 dark:border-white/10 rounded-full shadow-sm outline-none hover:shadow-md"><ChevronLeft size={20} /></button>
+                           
+                           <div className="flex flex-col items-center justify-center">
+                              <span className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-white leading-none mb-1">{selectedDiaryDate.toLocaleDateString('en-GB', { day: '2-digit' })}</span>
+                              <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{selectedDiaryDate.toLocaleDateString('en-GB', { month: 'short' })}</span>
+                              <span className="text-xs font-semibold text-slate-500 dark:text-slate-500">{selectedDiaryDate.getFullYear()}</span>
+                           </div>
+
+                           <button onClick={() => { const d = new Date(selectedDiaryDate); d.setDate(d.getDate() + 1); setSelectedDiaryDate(d); }} className="p-2 text-slate-500 hover:text-pink-500 transition-colors bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/50 dark:border-white/10 rounded-full shadow-sm outline-none hover:shadow-md"><ChevronRight size={20} /></button>
+                        </div>
+
+                        {/* Right Side: Entries List */}
+                        <div className="flex-grow p-6 md:p-8 overflow-y-auto custom-scrollbar relative">
+                          {(() => {
+                            const pad = (n) => n < 10 ? '0'+n : n;
+                            const selectedDateStr = `${selectedDiaryDate.getFullYear()}-${pad(selectedDiaryDate.getMonth()+1)}-${pad(selectedDiaryDate.getDate())}`;
+                            const dayEntries = diaryEntries.filter(e => e.dateStr === selectedDateStr);
+                            
+                            if (dayEntries.length === 0) {
+                              return (
+                                <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-slate-500 dark:text-slate-500">
+                                  <Book size={48} className="mb-4 opacity-50 stroke-[1.5]" />
+                                  <p className="text-sm font-bold">No entries for this date.</p>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="space-y-6 pb-20">
+                                {dayEntries.map(entry => {
+                                  const mood = MOODS.find(m => m.id === entry.mood) || MOODS[0];
+                                  const timeStr = new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                  return (
+                                    <div key={entry.id} className="relative pl-6 group">
+                                      <div className="absolute left-0 top-2 bottom-[-24px] w-0.5 bg-white/60 dark:bg-white/10 group-last:bg-transparent" />
+                                      <div className="absolute left-[-5px] top-2 w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-500 group-hover:bg-pink-400 transition-colors shadow-sm" />
+                                      
+                                      <div className="mb-2 flex justify-between items-center">
+                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{timeStr}</span>
+                                        <button onClick={(e) => { e.stopPropagation(); deleteDiaryEntry(entry.id); }} className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-colors outline-none"><Trash2 size={14} /></button>
+                                      </div>
+                                      
+                                      <div onClick={() => setViewingEntry(entry)} className="cursor-pointer bg-white/40 dark:bg-slate-800/30 backdrop-blur-md hover:bg-white/60 dark:hover:bg-slate-800/60 p-4 rounded-2xl transition-all border border-white/50 dark:border-white/5 hover:border-white/80 dark:hover:border-white/20 shadow-sm">
+                                         <div className="flex items-center gap-2 mb-2">
+                                            <div className="text-xl bg-white/60 dark:bg-slate-700/60 backdrop-blur-sm p-1.5 rounded-lg leading-none shadow-sm border border-white/40 dark:border-white/10">{mood.emoji}</div>
+                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{mood.label}</span>
+                                         </div>
+                                         {/* ADDED break-words here */}
+                                         <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed line-clamp-3 break-words">{entry.text}</p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Add Button Fab */}
+                        <div className="absolute bottom-6 right-6 md:left-1/2 md:-translate-x-1/2 md:right-auto z-20">
+                           <button onClick={() => setIsAddingDiary(true)} className="w-14 h-14 bg-pink-500/90 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg shadow-pink-500/30 hover:bg-pink-600 hover:scale-105 active:scale-95 transition-all outline-none md:border-[4px] border-white/50 dark:border-slate-800/50"><Plus size={24} /></button>
+                        </div>
+                      </div>
+                    )}
+
+                    {diaryView === 'insights' && (
+                      <div className="p-6 md:p-8 flex-grow overflow-y-auto custom-scrollbar animate-in fade-in bg-transparent">
+                         
+                         <div className="grid grid-cols-3 gap-4 mb-6">
+                            <div className="bg-white/50 dark:bg-slate-800/40 backdrop-blur-md p-4 md:p-6 rounded-3xl border border-white/60 dark:border-white/10 text-center shadow-lg hover:-translate-y-1 transition-transform">
+                               <p className="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-white mb-1">{diaryEntries.length}</p>
+                               <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Entries</p>
+                            </div>
+                            <div className="bg-white/50 dark:bg-slate-800/40 backdrop-blur-md p-4 md:p-6 rounded-3xl border border-white/60 dark:border-white/10 text-center shadow-lg hover:-translate-y-1 transition-transform">
+                               <p className="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-white mb-1">{[...new Set(diaryEntries.map(e => e.mood))].length}</p>
+                               <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Moods</p>
+                            </div>
+                            <div className="bg-white/50 dark:bg-slate-800/40 backdrop-blur-md p-4 md:p-6 rounded-3xl border border-white/60 dark:border-white/10 text-center shadow-lg hover:-translate-y-1 transition-transform">
+                               <p className="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-white mb-1">{getDiaryStreak()}</p>
+                               <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Streak</p>
+                            </div>
+                         </div>
+
+                         {/* Diary Streak Card */}
+                         <div className="bg-white/50 dark:bg-slate-800/40 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-white/60 dark:border-white/10 mb-6 shadow-lg">
+                            <h4 className="text-base font-extrabold text-slate-800 dark:text-white mb-6">Recent Activity</h4>
+                            
+                            <div className="relative flex justify-between items-center px-1 mb-8 overflow-x-auto pb-4 custom-scrollbar">
+                               <div className="absolute top-4 left-4 right-4 h-0.5 bg-white/60 dark:bg-white/10 -z-10" />
+                               {[6,5,4,3,2,1,0].map(daysAgo => {
+                                 const d = new Date();
+                                 d.setDate(d.getDate() - daysAgo);
+                                 const pad = (n) => n < 10 ? '0'+n : n;
+                                 const dStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                                 const hasEntry = diaryEntries.some(e => e.dateStr === dStr);
+                                 return (
+                                    <div key={daysAgo} className="flex flex-col items-center gap-2 bg-transparent min-w-[40px]">
+                                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors shadow-sm backdrop-blur-md border border-white/50 dark:border-white/20 ${hasEntry ? 'bg-pink-500/90 text-white shadow-md' : 'bg-white/60 dark:bg-slate-800/60 text-slate-500'}`}>
+                                          {hasEntry ? <CheckCircle2 size={16} /> : <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />}
+                                       </div>
+                                       <div className="flex flex-col items-center text-center">
+                                         <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{d.getDate()}</span>
+                                         <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">{d.toLocaleString('default', { month: 'short' })}</span>
+                                       </div>
+                                    </div>
+                                 );
+                               })}
+                            </div>
+                            <div className="flex items-center gap-2 pt-4 border-t border-white/40 dark:border-white/10">
+                               <Flame size={18} className="text-pink-500" />
+                               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Current active streak: <strong className="text-slate-900 dark:text-white font-bold">{getDiaryStreak()} days</strong></span>
+                            </div>
+                         </div>
+
+                         {/* Trends */}
+                         <div className="bg-white/50 dark:bg-slate-800/40 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-white/60 dark:border-white/10 shadow-lg">
+                            <h4 className="text-base font-extrabold text-slate-800 dark:text-white mb-6">Mood Distribution</h4>
+                            
+                            {diaryEntries.length > 0 ? (
+                              <div className="flex flex-col sm:flex-row items-center gap-8 md:gap-12">
+                                 <div className="relative w-32 h-32 shrink-0">
+                                    <svg width="128" height="128" viewBox="0 0 100 100" className="-rotate-90 drop-shadow-sm">
+                                      <circle cx="50" cy="50" r="36" fill="transparent" stroke="currentColor" strokeWidth="16" className="text-white/60 dark:text-white/10" />
+                                      {(() => {
+                                         let currentOffset = 0;
+                                         const totalMoods = diaryEntries.length;
+                                         const radius = 36;
+                                         const circumference = 2 * Math.PI * radius;
+                                         
+                                         return MOODS.map(mood => {
+                                            const count = diaryEntries.filter(e => e.mood === mood.id).length;
+                                            if (count === 0) return null;
+                                            const percentage = count / totalMoods;
+                                            const strokeDasharray = `${percentage * circumference} ${circumference}`;
+                                            const strokeDashoffset = -currentOffset;
+                                            currentOffset += percentage * circumference;
+                                            
+                                            return (
+                                              <circle 
+                                                key={mood.id}
+                                                cx="50" cy="50" r={radius} fill="transparent" 
+                                                stroke={mood.hex} strokeWidth="16" 
+                                                strokeDasharray={strokeDasharray} 
+                                                strokeDashoffset={strokeDashoffset}
+                                                className="transition-all duration-1000 ease-out"
+                                              />
+                                            );
+                                         });
+                                      })()}
+                                    </svg>
+                                 </div>
+
+                                 <div className="flex-grow w-full space-y-3">
+                                    {MOODS.map(mood => {
+                                       const count = diaryEntries.filter(e => e.mood === mood.id).length;
+                                       if (count === 0) return null;
+                                       const percentage = Math.round((count / diaryEntries.length) * 100);
+                                       
+                                       return (
+                                         <div key={mood.id} className="flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                               <div className="w-3 h-3 rounded-full shadow-sm" style={{backgroundColor: mood.hex}} />
+                                               <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm px-2.5 py-1.5 rounded-lg shadow-sm border border-white/50 dark:border-white/10">
+                                                  <span className="text-sm">{mood.emoji}</span>
+                                                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{mood.label}</span>
+                                               </div>
+                                            </div>
+                                            <span className="text-sm font-extrabold text-slate-800 dark:text-white">{percentage}%</span>
+                                         </div>
+                                       );
+                                    })}
+                                 </div>
+                              </div>
+                            ) : (
+                               <p className="text-sm font-medium text-slate-600 text-center py-8">Add more entries to see your mood trends.</p>
+                            )}
+                         </div>
+
+                      </div>
+                    )}
+
+                    {/* Add Entry Modal Overlay (ISOLATED COMPONENT) */}
+                    {isAddingDiary && (
+                      <DiaryEntryModal 
+                        onClose={() => setIsAddingDiary(false)}
+                        onSave={handleAddDiaryEntry}
+                      />
+                    )}
+
+                    {/* View Entry Full Screen Modal (GLASS) */}
+                    {viewingEntry && (
+                      <div className="absolute inset-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+                        <div className="px-6 py-4 flex justify-between items-center border-b border-white/50 dark:border-white/10 bg-white/40 dark:bg-slate-800/40 shadow-sm">
+                          <button onClick={() => setViewingEntry(null)} className="p-2 text-slate-600 hover:text-pink-500 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full shadow-sm transition-colors outline-none border border-white/40 dark:border-white/10"><ChevronLeft size={20} /></button>
+                          <div className="flex items-center gap-3">
+                             <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-2 rounded-xl shadow-sm text-xl leading-none border border-white/50 dark:border-white/10">{MOODS.find(m => m.id === viewingEntry.mood)?.emoji}</div>
+                             <div className="text-right">
+                                <p className="text-sm font-extrabold text-slate-800 dark:text-white">{new Date(viewingEntry.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{new Date(viewingEntry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                             </div>
+                          </div>
+                        </div>
+                        <div className="p-6 md:p-10 flex-grow overflow-y-auto custom-scrollbar">
+                          <div className="max-w-3xl mx-auto bg-white/50 dark:bg-slate-800/40 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-white/60 dark:border-white/10 shadow-lg">
+                            {/* ADDED break-words here */}
+                            <p className="text-base text-slate-800 dark:text-slate-200 leading-loose whitespace-pre-wrap font-semibold break-words">{viewingEntry.text}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* AI HUB Area */}
+      <div className="fixed bottom-24 lg:bottom-12 right-6 lg:right-12 z-[90] flex flex-col items-end gap-3">
+        {aiMenuOpen && (
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-2 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-6 duration-300 w-64 mb-2 overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/40 dark:border-white/5 flex items-center justify-between">
+              <p className="text-xs font-extrabold text-slate-800 dark:text-white">AI Tools</p>
+              <Sparkles size={14} className="text-blue-500" />
+            </div>
+            <div className="grid grid-cols-1 max-h-[300px] overflow-y-auto custom-scrollbar py-2">
+              {AI_TOOLS.map(tool => { 
+                const ToolIcon = tool.icon; 
+                return (
+                  <a key={tool.name} href={tool.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 mx-2 hover:bg-white/50 dark:hover:bg-slate-800/50 rounded-xl transition-colors group outline-none">
+                    <ToolIcon className={`${tool.color} group-hover:scale-110 transition-transform`} size={18} />
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{tool.name}</span>
+                    <ExternalLink size={12} className="ml-auto text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                ); 
+              })}
+            </div>
+          </div>
+        )}
+        <button onClick={() => setAiMenuOpen(!aiMenuOpen)} className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/30 border border-white/20 transition-all duration-300 hover:scale-110 active:scale-95 outline-none backdrop-blur-md ${aiMenuOpen ? 'bg-slate-800/90 dark:bg-slate-700/90 rotate-90' : 'bg-blue-600/90'}`}>
+          {aiMenuOpen ? <X size={24} /> : <Bot size={24} />}
+        </button>
+      </div>
+
+      {/* MOBILE BOTTOM NAV Bar (GLASS) */}
+      <nav className="fixed bottom-0 left-0 right-0 lg:hidden z-40 bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-t border-white/50 dark:border-white/10 pb-safe shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+        <div className="flex justify-around items-center px-2 py-2">
+          {[{id: 'dashboard', icon: LayoutDashboard}, {id: 'tasks', icon: CheckCircle2}, {id: 'routine', icon: Calendar}, {id: 'links', icon: LinkIcon}, {id: 'diary', icon: Book}].map(item => { 
+            const NavIcon = item.icon; 
+            const isActive = activeTab === item.id;
+            return (
+              <button key={item.id} onClick={() => handleTabChange(item.id)} className={`flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all outline-none ${isActive ? 'text-orange-500 scale-105' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-orange-50/80 dark:bg-orange-500/20 shadow-sm border border-orange-200/50 dark:border-orange-800/30 backdrop-blur-md' : ''}`}>
+                  <NavIcon size={22} />
+                </div>
+              </button>
+            ); 
+          })}
+        </div>
+      </nav>
+
+      {/* PERSONAL VAULT MODAL (GLASS) */}
+      {isVaultOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-2xl border border-white/50 dark:border-white/10 relative max-h-[85vh] overflow-hidden flex flex-col">
+              <button onClick={() => setIsVaultOpen(false)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors z-20 outline-none shadow-sm border border-white/40 dark:border-white/10"><X size={20} /></button>
+              
+              <div className="mb-8 flex items-center gap-4 border-b border-white/40 dark:border-white/10 pb-6">
+                <div className="p-3 bg-indigo-100/60 dark:bg-indigo-900/40 backdrop-blur-md rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-sm border border-white/50 dark:border-white/5"><ShieldCheck size={28} /></div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-1">Hidden Vault</h3>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Secure storage for sensitive links</p>
+                </div>
+              </div>
+              
+              <div className="flex-grow overflow-y-auto custom-scrollbar space-y-4 mb-6">
+                {vaultLinks.length > 0 ? vaultLinks.map(v => (
+                  <div key={v.id} className="p-4 rounded-2xl bg-white/50 dark:bg-slate-800/40 backdrop-blur-md border border-white/60 dark:border-white/10 flex items-center justify-between group transition-colors hover:border-indigo-300/50 dark:hover:border-indigo-700/50 shadow-sm">
+                    <div className="min-w-0 flex-grow pr-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="font-extrabold text-sm text-slate-800 dark:text-slate-200 truncate">{v.title}</p>
+                        {v.hint && <span className="flex items-center gap-1 text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-white/60 dark:bg-slate-700/60 backdrop-blur-sm px-2.5 py-0.5 rounded-full shadow-sm border border-white/40 dark:border-white/5"><Lock size={10} /> {v.hint}</span>}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setShowVaultLinks({...showVaultLinks, [v.id]: !showVaultLinks[v.id]})} className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors outline-none bg-indigo-50/60 dark:bg-indigo-500/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-indigo-200/50 dark:border-indigo-800/30 shadow-sm">
+                          {showVaultLinks[v.id] ? <EyeOff size={14} /> : <Eye size={14} />} 
+                          {showVaultLinks[v.id] ? 'Hide Link' : 'Reveal Link'}
+                        </button>
+                      </div>
+                      {showVaultLinks[v.id] && (
+                        <div className="mt-3 p-3 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-xl border border-white/50 dark:border-white/10 animate-in slide-in-from-top-2 shadow-inner">
+                          <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-blue-500 break-all hover:underline flex items-center gap-2 outline-none">{v.url} <ExternalLink size={14} className="shrink-0" /></a>
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => deleteVaultLink(v.id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 outline-none bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg border border-white/40 dark:border-white/5 shadow-sm"><Trash2 size={18} /></button>
+                  </div>
+                )) : <div className="py-12 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400"><Vault size={40} className="mb-3 opacity-50" /><p className="text-sm font-bold">Your vault is empty and secure.</p></div>}
+              </div>
+
+              <div className="pt-6 border-t border-white/40 dark:border-white/10">
+                {!isAddingVaultLink ? (
+                  <button onClick={() => setIsAddingVaultLink(true)} className="w-full py-3.5 bg-indigo-600/90 backdrop-blur-md text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30 active:scale-95 outline-none border border-white/20"><Plus size={18} /> Add Secure Link</button> 
+                ) : (
+                  <form onSubmit={addVaultLink} className="space-y-4 animate-in slide-in-from-bottom-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <input required placeholder="Link Title" className="p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 focus:border-indigo-500 outline-none dark:text-white shadow-inner" value={newVaultLink.title} onChange={e => setNewVaultLink({...newVaultLink, title: e.target.value})} />
+                      <input placeholder="Hint (Optional)" className="p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 focus:border-indigo-500 outline-none dark:text-white shadow-inner" value={newVaultLink.hint} onChange={e => setNewVaultLink({...newVaultLink, hint: e.target.value})} />
+                    </div>
+                    <input required placeholder="Secure URL" className="w-full p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl text-sm font-semibold border border-white/60 dark:border-white/10 focus:border-indigo-500 outline-none dark:text-white shadow-inner" value={newVaultLink.url} onChange={e => setNewVaultLink({...newVaultLink, url: e.target.value})} />
+                    <div className="flex gap-3">
+                      <button type="submit" className="flex-1 py-3.5 bg-indigo-600/90 backdrop-blur-md hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/30 transition-colors active:scale-95 outline-none border border-white/20">Save to Vault</button>
+                      <button type="button" onClick={() => setIsAddingVaultLink(false)} className="px-6 py-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md text-slate-700 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-700/60 rounded-xl font-bold text-sm transition-colors outline-none shadow-sm border border-white/40 dark:border-white/10">Cancel</button>
+                    </div>
+                  </form>
+                )}
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* MODAL LINK VAULT ENTRY (GLASS) */}
+      {isAddingLink && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
+           <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl p-8 rounded-3xl shadow-2xl w-full max-w-md border border-white/50 dark:border-white/10 relative">
+              <button onClick={() => setIsAddingLink(false)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors z-20 outline-none shadow-sm border border-white/40 dark:border-white/10"><X size={20} /></button>
+              <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-6 z-20 flex items-center gap-2"><LinkIcon size={20} className="text-emerald-500" /> Add New Link</h3>
+              
+              <form onSubmit={addLink} className="space-y-4 relative z-20">
+                <input required value={newLink.title} onChange={e => setNewLink({...newLink, title: e.target.value})} placeholder="Website Title" className="w-full p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-white/60 dark:border-white/10 shadow-inner text-sm font-semibold focus:border-emerald-500 dark:text-white outline-none" />
+                
+                <GlassSelect 
+                  value={newLink.category} 
+                  onChange={val => setNewLink({...newLink, category: val})} 
+                  options={CATEGORY_ORDER.map(k => ({value: k, label: CATEGORIES[k.toUpperCase()].label}))} 
+                />
+                
+                <input required value={newLink.url} onChange={e => setNewLink({...newLink, url: e.target.value})} placeholder="URL (e.g., elms.uiu.ac.bd)" className="w-full p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-white/60 dark:border-white/10 shadow-inner text-sm font-semibold focus:border-emerald-500 dark:text-white outline-none" />
+                
+                <div className="flex justify-end pt-4">
+                  <button type="submit" className="w-full py-3.5 bg-emerald-500/90 backdrop-blur-md hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/30 border border-white/20 transition-colors active:scale-95 outline-none">Save Link</button>
+                </div>
+              </form>
+           </div>
+        </div>
+      )}
+    </div>
+  );
+}

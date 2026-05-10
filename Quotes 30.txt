@@ -1,0 +1,36 @@
+Quotes 30
+
+const QUOTE_BANK = [
+
+"Indeed, with hardship comes ease. — Quran 94:6",
+"Do not lose hope, nor be sad. — Quran 3:139",
+"Verily, in the remembrance of Allah do hearts find rest. — Quran 13:28",
+"The best among you are those who have the best character. — Prophet Muhammad (SAW)",
+"Actions are judged by intentions. — Prophet Muhammad (SAW)",
+"And whoever puts their trust in Allah, He will be sufficient for them. — Quran 65:3",
+"Discipline is choosing what you want most over what you want now.",
+"The journey of a thousand miles begins with a single step. — Lao Tzu",
+"Success is the sum of small efforts repeated day in and day out. — Robert Collier",
+"A person who never made a mistake never tried anything new. — Albert Einstein",
+"Do something today your future self will thank you for.",
+"The future belongs to those who prepare for it today. — Malcolm X",
+"If you can't explain it simply, you don't understand it well enough. — Einstein",
+"Programs must be written for people to read. — Harold Abelson",
+"First, solve the problem. Then, write the code. — John Johnson",
+"Any fool can write code that a computer can understand. Good programmers write code humans can understand. — Martin Fowler",
+"Debugging is twice as hard as writing the code in the first place. — Brian Kernighan",
+"Simplicity is the soul of efficiency. — Austin Freeman",
+"The only way to do great work is to love what you do. — Steve Jobs",
+"Why do we fall? So that we can learn to pick ourselves up. — Batman Begins",
+"It’s not who I am underneath, but what I do that defines me. — Batman Begins",
+"Hope is a good thing, maybe the best of things. — Shawshank Redemption",
+"Great men are not born great, they grow great. — The Godfather",
+"I don't pay for suits. My suits are on the house or the house burns down. — Tommy Shelby",
+"When You Plan Something Well, There’s No Need To Rush. — Tommy Shelby",
+"The best way to predict the future is to invent it. — Alan Kay",
+"Your time is limited, so don't waste it living someone else's life. — Steve Jobs",
+"Logic will get you from A to B. Imagination will take you everywhere. — Albert Einstein",
+"Quality is not an act, it is a habit. — Aristotle",
+"The only thing we have to fear is fear itself. — Franklin D. Roosevelt"
+
+];
