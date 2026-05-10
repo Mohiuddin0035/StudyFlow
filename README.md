@@ -133,24 +133,18 @@ StudyFlow completely rejects default open-access templates. Every security model
 
 <br/>
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  SECURITY ARCHITECTURE                                              │
-│                                                                     │
-│  ┌─────────────┐   ┌──────────────────────┐   ┌─────────────────┐   │
-│  │  Auth Layer │──▶│  request.auth.uid   │──▶│ Isolated Data   │   │
-│  │  Firebase   │   │  Strict Verification │   │ Node (Per-User) │   │
-│  └─────────────┘   └──────────────────────┘   └─────────────────┘   │
-│                                                                     │
-│  ┌─────────────┐   ┌──────────────────────┐   ┌─────────────────┐   │
-│  │  Vault PIN  │──▶│ Secondary Auth Gate │──▶│ Encrypted Store │   │
-│  │  + Hint Key │   │  (Invisible Until    │   │ (Off-Screen)    │   │
-│  └─────────────┘   │   Unlocked)          │   └─────────────────┘   │
-│                    └──────────────────────┘                         │
-│                                                                     │
-│  NO global scraping · NO cross-user exposure · NO open templates    │
-└─────────────────────────────────────────────────────────────────────┘
-```
+| Layer | Component | Role | Scope |
+|---|---|---|---|
+| **Authentication** | Firebase Auth | Identity verification & session management | Entry gate — no UID, no access |
+| **Database** | Cloud Firestore | Realtime NoSQL document storage | All reads/writes locked to `request.auth.uid` |
+| **Security Rules** | Firestore Rules Engine | Server-side access control | Enforced before any data is returned |
+| **Vault Gate** | Custom PIN + Hint Key | Secondary authentication layer | Decoupled from Firebase Auth entirely |
+| **Vault Storage** | Encrypted Isolated Node | Hidden document store | Invisible in UI until vault is unlocked |
+| **Session Cache** | Browser LocalStorage | Persistent local state | Eliminates redundant Firestore reads |
+| **Mobile Bridge** | Capacitor | Native device API access | Safe-area padding, OS-level integration |
+| **Hosting & CDN** | Vercel Edge Network | Global deployment & delivery | Zero cold-start, edge-cached assets |
+
+> `NO global scraping` &nbsp;·&nbsp; `NO cross-user data exposure` &nbsp;·&nbsp; `NO open-access collection reads`
 
 <br/>
 
