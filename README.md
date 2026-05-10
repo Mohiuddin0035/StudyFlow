@@ -17,11 +17,7 @@
 
 <br/>
 
-[![Live Demo](https://img.shields.io/badge/◈%20LAUNCH%20PORTAL-0a0a0a?style=for-the-badge&logoColor=white)](https://studyflow-ruby.vercel.app/)
-&nbsp;
-[![GitHub Stars](https://img.shields.io/github/stars/Mohiuddin0035/StudyFlow?style=for-the-badge&color=0a0a0a&label=⭐%20STARS)](https://github.com/Mohiuddin0035/StudyFlow/stargazers)
-&nbsp;
-[![GitHub Forks](https://img.shields.io/github/forks/Mohiuddin0035/StudyFlow?style=for-the-badge&color=0a0a0a&label=⑂%20FORKS)](https://github.com/Mohiuddin0035/StudyFlow/network)
+[![Launch StudyFlow](https://img.shields.io/badge/◈%20%20LAUNCH%20STUDYFLOW%20%20◈-FF6B00?style=for-the-badge&logoColor=white&labelColor=cc5500)](https://studyflow-ruby.vercel.app/)
 
 <br/>
 
@@ -309,6 +305,6 @@ Please ensure any contribution respects the **security-first architecture** — 
 
 <br/>
 
-*© 2026 Mohiuddin Sikder Saikat — StudyFlow. All rights reserved.*
+*© 2026 Moheuddin Sikder Saikat — StudyFlow. All rights reserved.*
 
 </div>
