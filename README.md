@@ -21,7 +21,7 @@
 
 <br/>
 
-![StudyFlow Workspace](https://github.com/user-attachments/assets/ed5345b5-f980-450c-9b14-b994b4b31121)
+![StudyFlow Workspace](./Screenshot%202026-07-06%20205419.png)
 
 <br/>
 
