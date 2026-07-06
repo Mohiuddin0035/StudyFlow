@@ -35,7 +35,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'uiu-studyflow-v4.26'; 
+const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'uiu-studyflow-v26.2'; 
 
 setPersistence(auth, browserSessionPersistence);
 

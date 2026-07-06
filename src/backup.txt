@@ -35,7 +35,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'uiu-studyflow-v4.26'; 
+const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'uiu-studyflow-v26.2'; 
 
 setPersistence(auth, browserSessionPersistence);
 
@@ -790,7 +790,7 @@ export default function App() {
       `}</style>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xs font-bold text-slate-800 dark:text-slate-200">StudyFlow UIU</span>
-        <span className="bg-orange-100/80 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">v 9.11</span>
+        <span className="bg-orange-100/80 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">v 26.2</span>
       </div>
       <p className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
         Developed with <span className="inline-flex items-center justify-center animate-heart text-red-500 mx-0.5"><Heart size={12} fill="currentColor" /></span> by <span className="text-slate-800 dark:text-white font-bold">Moheuddin Sikder Saikat</span> (CSE 242)

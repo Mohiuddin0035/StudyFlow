@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UIU Student Companion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <header style="position: relative;">
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" />
+                    <div class="slider round">
+                        <span>☀️</span>
+                        <span>🌙</span>
+                    </div>
+                </label>
+            </div>
+
+            <h1>UIU Student Companion</h1>
+            <div class="subtitle">Utility Tools • v1.0 • Retro Edition</div>
+        </header>
+
+        <div id="menu" class="menu-grid">
+            <button class="menu-btn" onclick="showSection('cgpa-section')">
+                <span>📊</span> CGPA Calc
+            </button>
+            <button class="menu-btn" onclick="showSection('payment-section')">
+                <span>💰</span> Payment Calc
+            </button>
+        </div>
+
+        <div id="cgpa-section" class="tool-section">
+            <button class="back-btn" onclick="showSection('menu')">← Back to Menu</button>
+            <h2 class="section-title green-text">CGPA Calculator</h2>
+
+            <div class="form-group">
+                <label>Previous CGPA:</label>
+                <input type="number" id="prev-cgpa" placeholder="e.g. 3.50" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Completed Credits:</label>
+                <input type="number" id="prev-credit" placeholder="e.g. 60">
+            </div>
+            
+            <div class="divider"></div>
+            
+            <label>Current Trimester Courses:</label>
+            <div id="course-list">
+                </div>
+            
+            <button class="btn blue-btn" onclick="addCourse()">+ Add Course</button>
+            <button class="btn" onclick="calculateCGPA()">Calculate Result</button>
+
+            <div id="cgpa-result" class="result-box"></div>
+        </div>
+
+        <div id="payment-section" class="tool-section">
+            <button class="back-btn" onclick="showSection('menu')">← Back to Menu</button>
+            <h2 class="section-title blue-text">Payment Calculator</h2>
+
+            <div class="form-group">
+                <label>Total Trimester Fee:</label>
+                <input type="number" id="total-amount" placeholder="Enter Amount (e.g. 71500)">
+            </div>
+
+            <label>Select Waiver:</label>
+            <div class="waiver-group">
+                <button class="waiver-btn" onclick="calcPayment(0.75)">25%</button>
+                <button class="waiver-btn" onclick="calcPayment(0.50)">50%</button>
+                <button class="waiver-btn" onclick="calcPayment(0)">100%</button>
+                <button class="waiver-btn active" onclick="calcPayment(1.0)">None</button>
+            </div>
+
+            <div id="payment-result" class="result-box"></div>
+        </div>
+
+        <div class="footer-sig">
+            build by <span>Moheuddin</span>//0112420035&lt;CSE242/UIU&gt;
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+/* === COLOR VARIABLES === */
+/* Default Day Theme (Retro Codex) */
+:root {
+    --bg-color: #e0dec6;
+    --card-bg: #f4f3e6;
+    --accent-green: #5e8b7e;
+    --accent-blue: #557c8f;
+    --text-color: #333333;
+    --border-color: #a8a490;
+    --btn-hover: #4a6f64;
+    --input-bg: #ffffff;
+    --shadow-color: rgba(0,0,0,0.1);
+    --result-bg: #282c34;
+    --result-text: #abb2bf;
+}
+
+/* Dark Theme (Retro Terminal Night) */
+[data-theme="dark"] {
+    --bg-color: #1a1a1d; /* Dark background */
+    --card-bg: #2d2d30;  /* Darker card */
+    --accent-green: #76b3a1; /* Slightly brighter green for contrast */
+    --accent-blue: #6fa1bd;  /* Slightly brighter blue */
+    --text-color: #e0dec6;   /* Light text (used previous bg color) */
+    --border-color: #444444;
+    --btn-hover: #5e8b7e;
+    --input-bg: #3a3a3e;     /* Dark input background */
+    --shadow-color: rgba(0,0,0,0.3);
+    --result-bg: #121212;    /* Even darker result box */
+    --result-text: #c7c7c7;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Space Mono', monospace;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    background-image: linear-gradient(var(--border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+    background-size: 20px 20px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.container {
+    width: 100%;
+    max-width: 600px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    box-shadow: 8px 8px 0px var(--shadow-color);
+    padding: 30px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Header Style */
+header {
+    text-align: center;
+    border-bottom: 2px dashed var(--border-color);
+    padding-bottom: 20px;
+    margin-bottom: 25px;
+}
+
+h1 {
+    font-family: 'Fira Code', monospace;
+    color: var(--accent-green);
+    font-size: 24px;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    font-weight: 700;
+}
+
+.subtitle {
+    font-size: 12px;
+    color: var(--text-color);
+    opacity: 0.7;
+    margin-top: 5px;
+}
+
+/* === THEME SWITCH STYLES === */
+.theme-switch-wrapper {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+}
+
+.theme-switch {
+    display: inline-block;
+    height: 26px;
+    position: relative;
+    width: 50px;
+}
+
+.theme-switch input {
+    display: none;
+}
+
+.slider {
+    background-color: var(--border-color);
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+    border-radius: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5px;
+    font-size: 14px;
+}
+
+.slider:before {
+    background-color: var(--accent-green);
+    bottom: 3px;
+    content: "";
+    height: 20px;
+    left: 3px;
+    position: absolute;
+    transition: .4s;
+    width: 20px;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+input:checked + .slider {
+    background-color: var(--accent-blue);
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+/* Menu Grid */
+.menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.menu-btn {
+    background: var(--card-bg);
+    border: 2px solid var(--accent-green);
+    color: var(--accent-green);
+    padding: 20px;
+    font-family: 'Fira Code', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 120px;
+}
+
+.menu-btn:hover {
+    background: var(--accent-green);
+    color: var(--card-bg);
+    transform: translateY(-2px);
+    box-shadow: 4px 4px 0px rgba(94, 139, 126, 0.3);
+}
+
+.menu-btn span {
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Sections */
+.tool-section {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: var(--accent-blue);
+    cursor: pointer;
+    font-family: 'Fira Code', monospace;
+    margin-bottom: 15px;
+    text-decoration: underline;
+}
+
+.back-btn:hover { color: var(--text-color); }
+
+.section-title { margin-bottom: 15px; }
+.green-text { color: var(--accent-green); }
+.blue-text { color: var(--accent-blue); }
+
+.divider {
+    border-top: 1px dashed var(--border-color);
+    margin: 15px 0;
+}
+
+/* Form Elements */
+.form-group { margin-bottom: 15px; }
+label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+
+input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+input:focus { border-color: var(--accent-green); }
+
+.btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent-green);
+    color: var(--card-bg);
+    border: none;
+    font-family: 'Fira Code', monospace;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: 0.2s;
+}
+
+.btn:hover { background: var(--btn-hover); color: #fff; }
+.blue-btn { background: var(--accent-blue); margin-bottom: 5px; }
+
+/* Payment Buttons */
+.waiver-group {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+.waiver-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--accent-blue);
+    background: transparent;
+    color: var(--accent-blue);
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+.waiver-btn.active, .waiver-btn:hover {
+    background: var(--accent-blue);
+    color: var(--card-bg);
+}
+
+/* Result Box */
+.result-box {
+    margin-top: 20px;
+    background: var(--result-bg);
+    color: var(--result-text);
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    display: none;
+    border-left: 5px solid var(--accent-green);
+}
+
+/* Dynamic Course Inputs */
+.course-row {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 5px;
+}
+.course-row input { flex: 1; }
+.course-row input:first-child { flex: 2; }
+
+/* Signature Footer Style */
+.footer-sig {
+    margin-top: 40px;
+    text-align: center;
+    border-top: 1px dashed var(--border-color);
+    padding-top: 20px;
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--accent-blue);
+    opacity: 0.8;
+    letter-spacing: 0.5px;
+}
+
+.footer-sig span {
+    color: var(--accent-green);
+    font-weight: bold;
+}

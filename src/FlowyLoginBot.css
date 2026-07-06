@@ -1,0 +1,232 @@
+/* Flowy Login Bot CSS Animations */
+
+.flowy-bot-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 180px;
+  position: relative;
+  user-select: none;
+}
+
+.flowy-bot-container svg {
+  overflow: visible !important;
+}
+
+/* Breathing Body Effect */
+.flowy-body {
+  animation: flowy-breath 3.5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes flowy-breath {
+  0%, 100% {
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    transform: translateY(-3px) scaleY(1.02);
+  }
+}
+
+/* Eyes Blink Animation */
+.flowy-eye {
+  transition: all 0.25s ease-in-out;
+}
+
+/* Hands Typing Alternate Animations */
+.flowy-hand-left.is-typing {
+  animation: flowy-type-left 0.15s ease-in-out infinite alternate;
+}
+.flowy-hand-right.is-typing {
+  animation: flowy-type-right 0.15s ease-in-out infinite alternate 0.07s;
+}
+
+@keyframes flowy-type-left {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(1px, -2px); }
+}
+
+@keyframes flowy-type-right {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-1px, -2px); }
+}
+
+/* Floating Spark Lines for Typing */
+.flowy-spark {
+  animation: flowy-sparkle 0.4s ease-out infinite alternate;
+  transform-origin: center;
+}
+.flowy-spark-2 {
+  animation: flowy-sparkle 0.4s ease-out infinite alternate 0.2s;
+  transform-origin: center;
+}
+
+@keyframes flowy-sparkle {
+  0% {
+    opacity: 0.1;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 0.9;
+    transform: scale(1.2);
+  }
+}
+
+/* Sleeping Zzz Animations */
+.flowy-zzz-group {
+  position: absolute;
+  top: 15px;
+  right: 40%;
+  pointer-events: none;
+}
+
+.flowy-zzz-1, .flowy-zzz-2, .flowy-zzz-3 {
+  opacity: 0;
+  fill: #f97316;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.flowy-zzz-1 {
+  animation: flowy-float-zzz 2.5s infinite linear;
+}
+.flowy-zzz-2 {
+  animation: flowy-float-zzz 2.5s infinite linear 0.8s;
+  font-size: 20px;
+}
+.flowy-zzz-3 {
+  animation: flowy-float-zzz 2.5s infinite linear 1.6s;
+  font-size: 24px;
+}
+
+@keyframes flowy-float-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 10px) scale(0.6);
+  }
+  30% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.8;
+    transform: translate(-15px, -25px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-25px, -45px) scale(1.1);
+  }
+}
+
+/* Confused Head Shake Animation */
+.flowy-head.is-confused {
+  animation: flowy-shake 0.5s ease-in-out infinite;
+  transform-origin: center 50px;
+}
+
+@keyframes flowy-shake {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  25% { transform: rotate(-5deg) translateX(-2px); }
+  75% { transform: rotate(5deg) translateX(2px); }
+}
+
+/* Graduation Cap Success Throw */
+.flowy-grad-cap {
+  opacity: 0;
+  transform: translateY(15px) scale(0.5) rotate(0deg);
+  transform-origin: center;
+  transition: opacity 0.1s ease-out;
+}
+
+.flowy-grad-cap.is-thrown {
+  animation: flowy-cap-toss 1.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes flowy-cap-toss {
+  0% {
+    opacity: 0;
+    transform: translateY(15px) scale(0.5) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-66px) scale(1.1) rotate(380deg);
+  }
+  75% {
+    transform: translateY(-58px) scale(1) rotate(350deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-60px) scale(1) rotate(360deg);
+  }
+}
+
+/* Waves animation for Wave state */
+.flowy-hand-right.is-waving {
+  animation: flowy-wave 0.3s ease-in-out 6 alternate;
+  transform-origin: 130px 105px;
+}
+
+@keyframes flowy-wave {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-25deg); }
+}
+
+/* Floating shadow on the floor */
+.flowy-shadow {
+  animation: flowy-shadow-scale 3.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes flowy-shadow-scale {
+  0%, 100% { transform: scaleX(1); opacity: 0.12; }
+  50% { transform: scaleX(0.92); opacity: 0.08; }
+}
+
+/* Floating speech bubble (side cartoon placement) */
+.flowy-speech-bubble {
+  position: absolute;
+  top: 18px;
+  left: 145px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 10px;
+  font-weight: 805;
+  color: #1e293b;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
+  animation: bubble-float 3s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 50;
+}
+.dark .flowy-speech-bubble {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: #334155;
+  color: #f8fafc;
+}
+.flowy-speech-bubble::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  margin-top: -5px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-left: 1.5px solid #cbd5e1;
+  border-bottom: 1.5px solid #cbd5e1;
+  transform: rotate(45deg);
+}
+.dark .flowy-speech-bubble::after {
+  border-left-color: #334155;
+  border-bottom-color: #334155;
+}
+
+@keyframes bubble-float {
+  0% { transform: translateY(0px) rotate(-1.5deg); }
+  100% { transform: translateY(-4px) rotate(1.5deg); }
+}
