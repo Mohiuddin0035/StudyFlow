@@ -13,6 +13,7 @@ import {
   ClipboardList, Layers, MousePointerClick, Github, Linkedin, Facebook, Youtube, HardDrive
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
+import emailjs from '@emailjs/browser';
 import { 
   getFirestore, collection, doc, setDoc, addDoc, deleteDoc, 
   onSnapshot, updateDoc, writeBatch
@@ -582,6 +583,7 @@ export default function App() {
   const [activeMaterialTypeTab, setActiveMaterialTypeTab] = useState('all');
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [userOtpInput, setUserOtpInput] = useState('');
+  const [isOtpServiceFailed, setIsOtpServiceFailed] = useState(false);
   const [importConfirmData, setImportConfirmData] = useState(null);
   const [isCalendarViewOpen, setIsCalendarViewOpen] = useState(false);
   const [isAddingLink, setIsAddingLink] = useState(false);
@@ -1945,17 +1947,41 @@ export default function App() {
     showToast("Secure link updated! 🔐", "success");
   };
 
-  const sendOtpForMaterialDelete = () => {
+  const sendOtpForMaterialDelete = async () => {
     if (!user) return;
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedOtp(code);
     setUserOtpInput('');
-    
-    setTimeout(() => {
-      setIsOtpModalOpen(true);
-      console.log(`[StudyFlow OTP] Simulated Verification Code: ${code}`);
-      showToast(`Verification code sent to ${user.email}! 📧 (Code: ${code})`, "success");
-    }, 1500);
+    setIsOtpServiceFailed(false);
+    setIsOtpModalOpen(true);
+
+    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID;
+    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
+    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
+
+    if (serviceId && templateId && publicKey) {
+      showToast("Sending verification code to your email... 📧", "info");
+      try {
+        await emailjs.send(
+          serviceId,
+          templateId,
+          {
+            to_email: user.email,
+            to_name: user.displayName || 'StudyFlow User',
+            otp: code,
+          },
+          publicKey
+        );
+        showToast(`Verification code sent to ${user.email}! 📧`, "success");
+      } catch (err) {
+        console.error("EmailJS Error:", err);
+        setIsOtpServiceFailed(true);
+        showToast("OTP service limit exceeded or failed. Use backup code.", "warning");
+      }
+    } else {
+      console.log(`[StudyFlow OTP] Developer preview code: ${code}`);
+      showToast(`Verification code generated! 📧`, "success");
+    }
   };
 
   const executeBatchDeleteMaterials = async () => {
@@ -4710,10 +4736,20 @@ ${msg}`;
                 placeholder="Enter 6-Digit OTP" 
                 className="w-full text-center tracking-[0.5em] font-extrabold text-lg px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-red-500/50 dark:text-white outline-none"
               />
-              <div className="bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/15 rounded-xl p-3 text-left">
-                <span className="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider block mb-1">Developer Helper Tooltip</span>
-                <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">Since this is a client-side simulated action, your code is: <span className="font-extrabold text-orange-600 dark:text-orange-400">{generatedOtp}</span></p>
-              </div>
+              {isOtpServiceFailed && (
+                <div className="bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 text-left space-y-1">
+                  <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider block">OTP Service Limit Exceeded</span>
+                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Due to high traffic or monthly limits, email delivery is currently paused. Please use this backup code to proceed: <span className="font-extrabold text-amber-600 dark:text-amber-400 select-all">{generatedOtp}</span>
+                  </p>
+                </div>
+              )}
+              {!process.env.REACT_APP_EMAILJS_PUBLIC_KEY && !isOtpServiceFailed && (
+                <div className="bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/15 rounded-xl p-3 text-left">
+                  <span className="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider block mb-1">Developer Helper Tooltip</span>
+                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">Since you have not set up EmailJS in your `.env` file, your code is: <span className="font-extrabold text-orange-600 dark:text-orange-400">{generatedOtp}</span></p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
