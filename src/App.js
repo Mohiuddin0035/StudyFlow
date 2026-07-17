@@ -3,14 +3,14 @@ import {
   CheckCircle2, Circle, Plus, Trash2, Calendar, Link as LinkIcon, 
   BookOpen, School, Wrench, Users, Coffee, LayoutDashboard,
   ExternalLink, Clock, MapPin, Sparkles, Loader2, X,
-  UserCircle, MoonStar, Zap, Bell, LogOut, Mail, Lock,
+  UserCircle, MoonStar, Zap, Bell, LogOut, Mail, Lock, Sun, Moon,
   Bot, MessageSquare, Search, BrainCircuit, Cpu,
-  ShieldCheck, Vault, Eye, EyeOff, Menu, Heart, UserPlus, Quote,
+  ShieldCheck, Vault, Eye, EyeOff, Menu, Heart, UserPlus, Quote, ShieldAlert,
   ArrowRight, ArrowLeft,
   ChevronDown, ChevronUp, Maximize2, Star,
   Monitor, CheckSquare, FileText, Send, Inbox, Megaphone, AlertCircle,
   Award, TrendingUp, Play, Pause, RotateCcw, Flame, Copy, CreditCard, Edit2,
-  ClipboardList, Layers, MousePointerClick, Github, Linkedin, Facebook
+  ClipboardList, Layers, MousePointerClick, Github, Linkedin, Facebook, Youtube, HardDrive
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -20,7 +20,7 @@ import {
 import { 
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile,
-  signOut, setPersistence, browserSessionPersistence,
+  signOut, setPersistence, browserLocalPersistence,
   GoogleAuthProvider, signInWithPopup
 } from 'firebase/auth';
 import SplitText from './SplitText';
@@ -52,7 +52,7 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'uiu-studyflow-v26.2'; 
 
-setPersistence(auth, browserSessionPersistence);
+setPersistence(auth, browserLocalPersistence);
 
 // --- CONSTANTS ---
 const ADMIN_EMAIL = "msaikat2420035@bscse.uiu.ac.bd";
@@ -548,7 +548,7 @@ export default function App() {
   // --- INPUT STATE ---
   const [newPlan, setNewPlan] = useState({ topic: '', date: '', timeSlot: '', priority: 'medium' });
   const [newRoutine, setNewRoutine] = useState({ day: 'Saturday', course: '', code: '', faculty: '', time: '', room: '', ramadanTime: '' });
-  const [newLink, setNewLink] = useState({ title: '', url: '', category: 'official' });
+  const [newLink, setNewLink] = useState({ title: '', url: '', category: 'official', materialTypes: [] });
   const [newVaultLink, setNewVaultLink] = useState({ title: '', url: '', hint: '' });
   
   const [newCt, setNewCt] = useState({ course: '', topic: '', deadline: '' });
@@ -559,6 +559,29 @@ export default function App() {
   // --- INTERACTION STATE ---
   const [isAddingRoutine, setIsAddingRoutine] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState(null);
+  const [editingStudyPlan, setEditingStudyPlan] = useState(null);
+  const [editingCt, setEditingCt] = useState(null);
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [editingLink, setEditingLink] = useState(null);
+  const [editingVaultLink, setEditingVaultLink] = useState(null);
+  
+  // Materials segment states
+  const [isMaterialsModalOpen, setIsMaterialsModalOpen] = useState(false);
+  const [materialTypes, setMaterialTypes] = useState([
+    'Question Bank',
+    'Youtube Playlist',
+    'Drive',
+    'HandNote',
+    'Slides',
+    'Paid Course',
+    'Project-Show'
+  ]);
+  const [customMaterialTypeInput, setCustomMaterialTypeInput] = useState('');
+  const [isAddingCustomMaterialType, setIsAddingCustomMaterialType] = useState(false);
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+  const [activeMaterialTypeTab, setActiveMaterialTypeTab] = useState('all');
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [userOtpInput, setUserOtpInput] = useState('');
   const [importConfirmData, setImportConfirmData] = useState(null);
   const [isCalendarViewOpen, setIsCalendarViewOpen] = useState(false);
   const [isAddingLink, setIsAddingLink] = useState(false);
@@ -575,6 +598,39 @@ export default function App() {
   const [faviconImageObj, setFaviconImageObj] = useState(null);
   const [frontCardUrl, setFrontCardUrl] = useState('');
   const [backCardUrl, setBackCardUrl] = useState('');
+
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [dismissedMobileWarning, setDismissedMobileWarning] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isIosSafari, setIsIosSafari] = useState(false);
+  const [dismissedInstallBanner, setDismissedInstallBanner] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileDevice(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    // Detect iOS Safari specifically
+    const ua = window.navigator.userAgent;
+    const isIPad = !!ua.match(/iPad/i);
+    const isIPhone = !!ua.match(/iPhone/i);
+    const isSafari = !!ua.match(/WebKit/i) && !ua.match(/CriOS/i) && !ua.match(/FxiOS/i);
+    setIsIosSafari((isIPad || isIPhone) && isSafari);
+
+    // Capture PWA Install trigger event
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   useEffect(() => {
     // 1. Programmatically generate a pixel-perfect QR code for the GitHub profile link
@@ -935,15 +991,33 @@ export default function App() {
         setSessionActiveUser(null);
         setAuthLoading(false);
       } else {
-        if (!showCover) {
-          setLoginBotState('success');
+        const loginTimeStr = localStorage.getItem('studyflow_login_timestamp');
+        const loginTime = loginTimeStr ? parseInt(loginTimeStr) : null;
+        
+        if (loginTime && (Date.now() - loginTime > 259200000)) {
+          localStorage.removeItem('studyflow_login_timestamp');
+          signOut(auth);
+          setUser(null);
+          setSessionActiveUser(null);
+          setAuthLoading(false);
           setTimeout(() => {
+            showToast("Session expired after 3 days. Please sign in again. 🔐", "warning");
+          }, 1000);
+        } else {
+          if (!loginTime) {
+            localStorage.setItem('studyflow_login_timestamp', Date.now().toString());
+          }
+          
+          if (!showCover) {
+            setLoginBotState('success');
+            setTimeout(() => {
+              setSessionActiveUser(u);
+              setAuthLoading(false);
+            }, 1800);
+          } else {
             setSessionActiveUser(u);
             setAuthLoading(false);
-          }, 1800);
-        } else {
-          setSessionActiveUser(u);
-          setAuthLoading(false);
+          }
         }
       }
     });
@@ -1005,6 +1079,7 @@ export default function App() {
       } else {
         await signInWithEmailAndPassword(auth, authData.email, authData.password);
       }
+      localStorage.setItem('studyflow_login_timestamp', Date.now().toString());
     } catch (err) {
       setAuthError(err.message.replace('Firebase:', '').replace('auth/', ''));
       setLoginBotState('confused');
@@ -1023,6 +1098,7 @@ export default function App() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      localStorage.setItem('studyflow_login_timestamp', Date.now().toString());
     } catch (err) {
       setAuthError(err.message.replace('Firebase:', '').replace('auth/', ''));
       setLoginBotState('confused');
@@ -1054,6 +1130,7 @@ export default function App() {
 
   const handleLogout = () => {
     signOut(auth);
+    localStorage.removeItem('studyflow_login_timestamp');
     setShowCover(false); // Return to auth page instead of cover page
     setAuthData({ email: '', password: '', username: '' }); // Clear user credentials for security
     setAuthMode('login'); // Ensure it resets to login view
@@ -1064,6 +1141,20 @@ export default function App() {
     setQuoteRevealed(false);
     setDailyQuote("");
     setLoginBotState('wave');
+  };
+
+  const handleInstallClick = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the PWA install prompt');
+        } else {
+          console.log('User dismissed the PWA install prompt');
+        }
+        setDeferredPrompt(null);
+      });
+    }
   };
 
   // --- ACADEMIC PROFILES HANDLERS ---
@@ -1497,6 +1588,75 @@ export default function App() {
     return hours * 60 + minutes;
   };
 
+  const getLinkBranding = (url) => {
+    if (!url) return { icon: ExternalLink, color: 'text-slate-500', glowColor: 'rgba(249, 115, 22, 0.4)', bg: 'bg-slate-100 dark:bg-slate-800/60', hoverText: 'group-hover:text-orange-500', starBg: 'bg-amber-50/80 dark:bg-amber-500/10', starBorder: 'border-amber-300/60 dark:border-amber-500/40', starText: 'text-amber-700 dark:text-amber-300' };
+    const lowUrl = url.toLowerCase();
+    if (lowUrl.includes('facebook.com') || lowUrl.includes('fb.com')) {
+      return { 
+        icon: Facebook, 
+        color: 'text-[#1877F2]', 
+        glowColor: 'rgba(24, 119, 242, 0.6)', 
+        bg: 'bg-[#1877F2]/10 text-[#1877F2]', 
+        hoverText: 'group-hover:text-[#1877F2]', 
+        border: 'border-[#1877F2]/30', 
+        starBg: 'bg-[#1877F2]/10 dark:bg-[#1877F2]/20', 
+        starBorder: 'border-[#1877F2]/40', 
+        starText: 'text-[#1877F2] dark:text-[#60a5fa]' 
+      };
+    }
+    if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
+      return { 
+        icon: Youtube, 
+        color: 'text-[#FF0000]', 
+        glowColor: 'rgba(255, 0, 0, 0.6)', 
+        bg: 'bg-[#FF0000]/10 text-[#FF0000]', 
+        hoverText: 'group-hover:text-[#FF0000]', 
+        border: 'border-[#FF0000]/30',
+        starBg: 'bg-[#FF0000]/10 dark:bg-[#FF0000]/20', 
+        starBorder: 'border-[#FF0000]/40', 
+        starText: 'text-[#FF0000] dark:text-[#f87171]'
+      };
+    }
+    if (lowUrl.includes('drive.google.com') || lowUrl.includes('docs.google.com')) {
+      return { 
+        icon: HardDrive, 
+        color: 'text-[#FBBC05]', 
+        glowColor: 'rgba(251, 188, 5, 0.6)', 
+        bg: 'bg-[#FBBC05]/10 text-[#FBBC05]', 
+        hoverText: 'group-hover:text-[#FBBC05]', 
+        border: 'border-[#FBBC05]/30',
+        starBg: 'bg-[#FBBC05]/10 dark:bg-[#FBBC05]/20', 
+        starBorder: 'border-[#FBBC05]/40', 
+        starText: 'text-[#FBBC05] dark:text-[#fbbf24]'
+      };
+    }
+    if (lowUrl.includes('uiu.ac.bd')) {
+      return { 
+        icon: School, 
+        color: 'text-[#FF7A00]', 
+        glowColor: 'rgba(255, 122, 0, 0.6)', 
+        bg: 'bg-[#FF7A00]/10 text-[#FF7A00]', 
+        hoverText: 'group-hover:text-[#FF7A00]', 
+        border: 'border-[#FF7A00]/30',
+        starBg: 'bg-[#FF7A00]/10 dark:bg-[#FF7A00]/20', 
+        starBorder: 'border-[#FF7A00]/40', 
+        starText: 'text-[#FF7A00] dark:text-[#fb923c]'
+      };
+    }
+    // Default/General
+    return { 
+      icon: ExternalLink, 
+      color: 'text-amber-500', 
+      glowColor: 'rgba(245, 158, 11, 0.6)', 
+      bg: 'bg-amber-100/80 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400', 
+      hoverText: 'group-hover:text-amber-500', 
+      border: 'border-amber-200/50 dark:border-amber-700/50',
+      starBg: 'bg-amber-50/80 dark:bg-amber-500/10', 
+      starBorder: 'border-amber-300/60 dark:border-amber-500/40', 
+      starText: 'text-amber-700 dark:text-amber-300'
+    };
+  };
+
   const executeCalendarImport = async (confirmData, replacePrev) => {
     if (!confirmData || !user) return;
     setImportConfirmData(null);
@@ -1685,9 +1845,16 @@ export default function App() {
   const addLink = async (e) => {
     e.preventDefault();
     if (!newLink.title || !newLink.url || !user) return;
+    
+    // Validation for materials type selection
+    if (newLink.category === 'materials' && (!newLink.materialTypes || newLink.materialTypes.length === 0)) {
+      showToast("Please select at least one material type first!", "warning");
+      return;
+    }
+    
     let url = newLink.url.startsWith('http') ? newLink.url : 'https://' + newLink.url;
     const data = { ...newLink, url };
-    setNewLink({ title: '', url: '', category: 'official' });
+    setNewLink({ title: '', url: '', category: 'official', materialTypes: [] });
     setIsAddingLink(false);
     await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'links'), data);
     showToast("Resource link saved 🔗", "success");
@@ -1719,6 +1886,99 @@ export default function App() {
     if (id && user) {
       await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'vaultLinks', id)); 
       showToast("Secure link deleted", "info");
+    }
+  };
+
+  const editStudyPlanHandler = async (e) => {
+    e.preventDefault();
+    if (!editingStudyPlan || !editingStudyPlan.topic || !user) return;
+    const { id, ...data } = editingStudyPlan;
+    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profiles', activeProfileId, 'studyPlans', id), data);
+    setEditingStudyPlan(null);
+    showToast("Study plan goal updated! 📝", "success");
+  };
+
+  const editCtHandler = async (e) => {
+    e.preventDefault();
+    if (!editingCt || !editingCt.course || !editingCt.deadline || !user) return;
+    const { id, ...data } = editingCt;
+    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profiles', activeProfileId, 'cts', id), data);
+    setEditingCt(null);
+    showToast("Class Test details updated! 📝", "success");
+  };
+
+  const editAssignmentHandler = async (e) => {
+    e.preventDefault();
+    if (!editingAssignment || !editingAssignment.course || !editingAssignment.deadline || !user) return;
+    const { id, ...data } = editingAssignment;
+    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profiles', activeProfileId, 'assignments', id), data);
+    setEditingAssignment(null);
+    showToast("Assignment details updated! 📝", "success");
+  };
+
+  const editLinkHandler = async (e) => {
+    e.preventDefault();
+    if (!editingLink || !editingLink.title || !editingLink.url || !user) return;
+    
+    // Validation for materials type selection
+    if (editingLink.category === 'materials' && (!editingLink.materialTypes || editingLink.materialTypes.length === 0)) {
+      showToast("Please select at least one material type first!", "warning");
+      return;
+    }
+    
+    let url = editingLink.url.startsWith('http') ? editingLink.url : 'https://' + editingLink.url;
+    const { id, ...data } = editingLink;
+    data.url = url;
+    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'links', id), data);
+    setEditingLink(null);
+    showToast("Resource link updated! 🔗", "success");
+  };
+
+  const editVaultLinkHandler = async (e) => {
+    e.preventDefault();
+    if (!editingVaultLink || !editingVaultLink.title || !editingVaultLink.url || !user) return;
+    let url = editingVaultLink.url.startsWith('http') ? editingVaultLink.url : 'https://' + editingVaultLink.url;
+    const { id, ...data } = editingVaultLink;
+    data.url = url;
+    await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'vaultLinks', id), data);
+    setEditingVaultLink(null);
+    showToast("Secure link updated! 🔐", "success");
+  };
+
+  const sendOtpForMaterialDelete = () => {
+    if (!user) return;
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(code);
+    setUserOtpInput('');
+    
+    setTimeout(() => {
+      setIsOtpModalOpen(true);
+      console.log(`[StudyFlow OTP] Simulated Verification Code: ${code}`);
+      showToast(`Verification code sent to ${user.email}! 📧 (Code: ${code})`, "success");
+    }, 1500);
+  };
+
+  const executeBatchDeleteMaterials = async () => {
+    if (userOtpInput !== generatedOtp) {
+      showToast("Incorrect verification code! Please check again.", "error");
+      return;
+    }
+    
+    if (!user) return;
+    try {
+      const materialsList = links.filter(l => l.category === 'materials');
+      const batch = writeBatch(db);
+      materialsList.forEach(m => {
+        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'links', m.id);
+        batch.delete(docRef);
+      });
+      await batch.commit();
+      setIsOtpModalOpen(false);
+      setIsMaterialsModalOpen(false);
+      showToast("All materials links deleted successfully! 🧹", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to delete materials links. ⚠️", "error");
     }
   };
 
@@ -1881,13 +2141,40 @@ ${msg}`;
     );
   }
 
-  if (!sessionActiveUser) {
-    if (showCover) {
+  if (showCover && (!sessionActiveUser || !isMobileDevice)) {
+    if (isMobileDevice && !dismissedMobileWarning && !sessionActiveUser) {
+        return (
+          <div key="mobile-warning-root" className="min-h-screen w-full relative flex items-center justify-center p-4 bg-[#070608] text-white font-sans overflow-hidden transition-colors duration-500">
+            {/* Ambient glows behind */}
+            <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-orange-500/20 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
+            
+            <div className="relative z-10 w-full max-w-md bg-white/10 dark:bg-slate-900/50 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 bg-orange-500/10 border border-orange-500/25 text-orange-500 rounded-2xl flex items-center justify-center mb-6 shadow-md shadow-orange-500/5">
+                <Monitor size={32} className="animate-pulse" />
+              </div>
+              <h3 className="text-xl font-black tracking-tight text-white mb-3">Better on Desktop</h3>
+              <p className="text-xs font-semibold text-slate-300 leading-relaxed mb-8 max-w-[320px]">
+                For the best academic experience, StudyFlow is optimized for laptop or desktop viewports.
+              </p>
+              <button 
+                onClick={() => {
+                  setDismissedMobileWarning(true);
+                  setShowCover(false); // head straight to login
+                }}
+                className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white py-3.5 px-6 rounded-2xl font-bold text-xs md:text-sm shadow-lg shadow-orange-500/10 active:scale-95 transition-all outline-none border border-white/10 cursor-pointer"
+              >
+                Proceed as it is
+              </button>
+            </div>
+          </div>
+        );
+      }
       // --- COVER PAGE (Landing) ---
       return (
         <div key="cover-page-root" className="h-screen w-full relative flex flex-col justify-between bg-[#fafafa] dark:bg-[#070608] transition-colors duration-500 font-sans overflow-hidden">
-          <TargetCursor targetSelector="button, a, input, select, .cursor-target" spinDuration={2} hideDefaultCursor={true} parallaxOn={true} />
-          <ThemeTassel darkMode={darkMode} setDarkMode={setDarkMode} />
+          {!isMobileDevice && <TargetCursor targetSelector="button, a, input, select, .cursor-target" spinDuration={2} hideDefaultCursor={true} parallaxOn={true} />}
+          {!isMobileDevice && <ThemeTassel darkMode={darkMode} setDarkMode={setDarkMode} />}
           <style dangerouslySetInnerHTML={{__html: `
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
             * { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -2087,13 +2374,14 @@ ${msg}`;
           {renderLanyardModal()}
         </div>
       );
-    }
+  }
 
+  if (!sessionActiveUser) {
     // --- AUTH PAGE (Login/Signup) ---
     return (
       <div key="auth-page-root" className="min-h-screen relative flex items-center justify-center p-4 transition-colors duration-500 font-sans overflow-hidden bg-slate-50 dark:bg-slate-950">
-        <TargetCursor targetSelector="button, a, input, select, .cursor-target" spinDuration={2} hideDefaultCursor={true} parallaxOn={true} />
-        <ThemeTassel darkMode={darkMode} setDarkMode={setDarkMode} />
+        {!isMobileDevice && <TargetCursor targetSelector="button, a, input, select, .cursor-target" spinDuration={2} hideDefaultCursor={true} parallaxOn={true} />}
+        {!isMobileDevice && <ThemeTassel darkMode={darkMode} setDarkMode={setDarkMode} />}
         <style dangerouslySetInnerHTML={{__html: `
           @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
           * { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -2195,8 +2483,8 @@ ${msg}`;
 
   return (
     <div key="workspace-page-root" className="h-screen flex font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-hidden relative">
-      <TargetCursor targetSelector="button, a, input, select, .cursor-target" spinDuration={2} hideDefaultCursor={true} parallaxOn={true} />
-      <ThemeTassel darkMode={darkMode} setDarkMode={setDarkMode} />
+      {!isMobileDevice && <TargetCursor targetSelector="button, a, input, select, .cursor-target" spinDuration={2} hideDefaultCursor={true} parallaxOn={true} />}
+      {!isMobileDevice && <ThemeTassel darkMode={darkMode} setDarkMode={setDarkMode} />}
 
 
       {/* Background Orbs */}
@@ -2207,55 +2495,59 @@ ${msg}`;
       </div>
       
       {/* SIDEBAR */}
-      <aside className={`fixed inset-y-0 left-0 z-[100] lg:relative lg:translate-x-0 w-72 lg:w-64 bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-white/50 dark:border-white/10 flex flex-col p-6 transition-transform duration-300 overflow-y-auto custom-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${mobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between mb-8 px-2 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-orange-500/90 backdrop-blur-md rounded-lg flex items-center justify-center text-white shadow-lg border border-white/20"><School size={18} /></div>
-            <h1 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white">StudyFlow</h1>
+      {!isMobileDevice && (
+        <aside className={`fixed inset-y-0 left-0 z-[100] lg:relative lg:translate-x-0 w-72 lg:w-64 bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-white/50 dark:border-white/10 flex flex-col p-6 transition-transform duration-300 overflow-y-auto custom-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${mobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+          <div className="flex items-center justify-between mb-8 px-2 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-orange-500/90 backdrop-blur-md rounded-lg flex items-center justify-center text-white shadow-lg border border-white/20"><School size={18} /></div>
+              <h1 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white">StudyFlow</h1>
+            </div>
+            <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-slate-500 hover:text-orange-500 outline-none"><X size={20} /></button>
           </div>
-          <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-slate-500 hover:text-orange-500 outline-none"><X size={20} /></button>
-        </div>
-        
-        <nav className="flex flex-col gap-1.5 flex-grow mb-6 relative z-10">
-          <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" onClick={() => setMobileSidebarOpen(false)} />
-          <NavItem id="planner" icon={CheckSquare} label="Study Planner" onClick={() => setMobileSidebarOpen(false)} />
-          <NavItem id="routine" icon={Calendar} label="Routine" onClick={() => setMobileSidebarOpen(false)} />
-          <NavItem id="assessments" icon={FileText} label="C & A" onClick={() => setMobileSidebarOpen(false)} />
-          <NavItem id="links" icon={LinkIcon} label="Link Vault" onClick={() => setMobileSidebarOpen(false)} />
-          <NavItem id="cgpa" icon={Award} label="CGPA & Payment" onClick={() => setMobileSidebarOpen(false)} />
-        </nav>
+          
+          <nav className="flex flex-col gap-1.5 flex-grow mb-6 relative z-10">
+            <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" onClick={() => setMobileSidebarOpen(false)} />
+            <NavItem id="planner" icon={CheckSquare} label="Study Planner" onClick={() => setMobileSidebarOpen(false)} />
+            <NavItem id="routine" icon={Calendar} label="Routine" onClick={() => setMobileSidebarOpen(false)} />
+            <NavItem id="assessments" icon={FileText} label="C & A" onClick={() => setMobileSidebarOpen(false)} />
+            <NavItem id="links" icon={LinkIcon} label="Link Vault" onClick={() => setMobileSidebarOpen(false)} />
+            <NavItem id="cgpa" icon={Award} label="CGPA & Payment" onClick={() => setMobileSidebarOpen(false)} />
+          </nav>
 
-        <div className="relative z-10"><CreditSection /></div>
-        
-        <div className="mt-auto pt-6 border-t border-slate-200/50 dark:border-slate-700/50 relative z-10 space-y-2">
-           <button onClick={() => setRamadanMode(!ramadanMode)} className="w-full flex items-center justify-between group outline-none p-2 hover:bg-white/40 dark:hover:bg-slate-800/40 rounded-xl transition-colors">
-              <div className="flex items-center gap-3 text-sm font-semibold text-slate-600 dark:text-slate-300"><MoonStar size={18} className="text-indigo-400" /> Ramadan Mode</div>
-              <div className={`w-9 h-5 rounded-full p-0.5 transition-colors shadow-inner ${ramadanMode ? 'bg-indigo-500/90 backdrop-blur-sm' : 'bg-slate-300/50 dark:bg-slate-700/50'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${ramadanMode ? 'translate-x-4' : 'translate-x-0'}`} /></div>
-           </button>
-           
-           <NavItem id="inbox" icon={Inbox} label="Inbox" onClick={() => setMobileSidebarOpen(false)} />
-           
-           <div className="pt-4 mt-2 flex items-center justify-between px-2">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-md flex items-center justify-center text-slate-500 border border-white/40 dark:border-white/10 shadow-sm"><UserCircle size={16} /></div>
-                <div className="overflow-hidden"><p className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[120px]">{user?.displayName}</p></div>
-              </div>
-              <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors outline-none"><LogOut size={16} /></button>
-           </div>
-        </div>
-      </aside>
+          <div className="relative z-10"><CreditSection /></div>
+          
+          <div className="mt-auto pt-6 border-t border-slate-200/50 dark:border-slate-700/50 relative z-10 space-y-2">
+             <button onClick={() => setRamadanMode(!ramadanMode)} className="w-full flex items-center justify-between group outline-none p-2 hover:bg-white/40 dark:hover:bg-slate-800/40 rounded-xl transition-colors">
+                <div className="flex items-center gap-3 text-sm font-semibold text-slate-600 dark:text-slate-300"><MoonStar size={18} className="text-indigo-400" /> Ramadan Mode</div>
+                <div className={`w-9 h-5 rounded-full p-0.5 transition-colors shadow-inner ${ramadanMode ? 'bg-indigo-500/90 backdrop-blur-sm' : 'bg-slate-300/50 dark:bg-slate-700/50'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${ramadanMode ? 'translate-x-4' : 'translate-x-0'}`} /></div>
+             </button>
+             
+             <NavItem id="inbox" icon={Inbox} label="Inbox" onClick={() => setMobileSidebarOpen(false)} />
+             
+             <div className="pt-4 mt-2 flex items-center justify-between px-2">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-md flex items-center justify-center text-slate-500 border border-white/40 dark:border-white/10 shadow-sm"><UserCircle size={16} /></div>
+                  <div className="overflow-hidden"><p className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[120px]">{user?.displayName}</p></div>
+                </div>
+                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors outline-none"><LogOut size={16} /></button>
+             </div>
+          </div>
+        </aside>
+      )}
 
-      {mobileSidebarOpen && <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[99] lg:hidden" onClick={() => setMobileSidebarOpen(false)} />}
+      {!isMobileDevice && mobileSidebarOpen && <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[99] lg:hidden" onClick={() => setMobileSidebarOpen(false)} />}
 
       <main className="flex-grow overflow-y-auto relative bg-transparent custom-scrollbar z-10 transform-gpu" style={{ WebkitOverflowScrolling: 'touch' }}>
         <header className="sticky top-0 z-50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl px-6 lg:px-8 py-4 flex justify-between items-center border-b border-white/50 dark:border-white/10 shadow-sm transform-gpu">
           <div className="flex items-center gap-3">
-             <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-orange-500 transition-colors outline-none"><Menu size={22} /></button>
+             {!isMobileDevice && (
+               <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-orange-500 transition-colors outline-none"><Menu size={22} /></button>
+             )}
              <div className="flex items-center gap-2">
                <h2 className="text-lg font-bold text-slate-800 dark:text-white capitalize">
                  {activeTab === 'assessments' ? 'CT & Assignments' : activeTab === 'cgpa' ? 'CGPA & Payment' : activeTab === 'links' ? 'Link Vault' : activeTab}
                </h2>
-               {activeTab === 'dashboard' && (
+               {!isMobileDevice && activeTab === 'dashboard' && (
                  <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-300 select-none px-3 py-1 bg-slate-100/85 dark:bg-slate-800/85 rounded-full border border-slate-200/60 dark:border-slate-800/80 shadow-xs tracking-wider uppercase flex items-center gap-1.5 ml-2">
                    <School size={11} className="text-orange-500 animate-pulse" />
                    <span>{profiles.find(p => p.id === activeProfileId)?.name || 'Profile 1'}</span>
@@ -2418,6 +2710,36 @@ ${msg}`;
                         })}
                       </div>
                     </div>
+
+                    {/* Dark Mode Theme Toggle for mobile users */}
+                    {isMobileDevice && (
+                      <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center justify-between p-2.5 mb-1 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition-all font-semibold text-sm outline-none">
+                         <span className="flex items-center gap-3">{darkMode ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-slate-400" />} {darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                         <div className={`w-9 h-5 rounded-full p-0.5 transition-colors shadow-inner ${darkMode ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                           <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${darkMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                         </div>
+                      </button>
+                    )}
+
+                    {/* Ramadan Mode for mobile users */}
+                    {isMobileDevice && (
+                      <button onClick={() => setRamadanMode(!ramadanMode)} className="w-full flex items-center justify-between p-2.5 mb-1 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition-all font-semibold text-sm outline-none">
+                         <span className="flex items-center gap-3"><MoonStar size={16} className="text-indigo-400" /> Ramadan Mode</span>
+                         <div className={`w-9 h-5 rounded-full p-0.5 transition-colors shadow-inner ${ramadanMode ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                           <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${ramadanMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                         </div>
+                      </button>
+                    )}
+
+                    {/* Inbox for mobile users */}
+                    {isMobileDevice && (
+                      <button onClick={() => { setActiveTab('inbox'); setIsProfileModalOpen(false); }} className="w-full flex items-center gap-3 p-2.5 mb-1 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition-all font-semibold text-sm outline-none">
+                        <Inbox size={16} className="text-slate-500" /> Inbox
+                        {unreadAnnouncementsCount > 0 && (
+                          <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadAnnouncementsCount}</span>
+                        )}
+                      </button>
+                    )}
 
                     <button onClick={() => { setIsVaultOpen(true); setIsProfileModalOpen(false); }} className="w-full flex items-center gap-3 p-2.5 mb-1 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition-all font-semibold text-sm outline-none"><Vault size={16} className="text-indigo-500" /> Hidden Vault</button>
                     <button onClick={handleLogout} className="w-full flex items-center gap-3 p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all font-semibold text-sm outline-none border-none">
@@ -2842,7 +3164,8 @@ ${msg}`;
                                     {p.timeSlot && <p className={`text-xs mt-0.5 font-semibold ${p.completed ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'}`}><Clock size={12} className="inline mr-1 opacity-70 mb-0.5"/>{p.timeSlot}</p>}
                                   </div>
                                   <div className={`w-2.5 h-2.5 rounded-full shrink-0 shadow-sm ${p.priority === 'high' ? 'bg-red-500' : p.priority === 'medium' ? 'bg-orange-500' : 'bg-blue-500'}`} />
-                                  <button onClick={() => deleteStudyPlan(p.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all outline-none"><Trash2 size={18} /></button>
+                                  <button onClick={() => setEditingStudyPlan(p)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-blue-500 transition-all outline-none" title="Edit Goal"><Edit2 size={18} /></button>
+                                  <button onClick={() => deleteStudyPlan(p.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all outline-none" title="Delete Goal"><Trash2 size={18} /></button>
                                 </div>
                               ))}
                             </div>
@@ -2893,7 +3216,10 @@ ${msg}`;
                                 <p className="text-xs font-semibold text-slate-500 truncate mt-0.5">{ct.topic}</p>
                                 <p className={`text-[11px] font-bold mt-2 flex items-center gap-1 ${ct.completed ? 'text-slate-400' : 'text-purple-600 dark:text-purple-400'}`}><Calendar size={12}/> {new Date(ct.deadline).toLocaleDateString('en-US', {day:'numeric', month:'short', year:'numeric'})}</p>
                              </div>
-                             <button onClick={() => deleteCt(ct.id)} className="opacity-0 group-hover:opacity-100 self-start p-1.5 text-slate-400 hover:text-red-500 transition-colors outline-none"><Trash2 size={16} /></button>
+                             <div className="opacity-0 group-hover:opacity-100 flex gap-1 self-start">
+                               <button onClick={() => setEditingCt(ct)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors outline-none" title="Edit CT"><Edit2 size={16} /></button>
+                               <button onClick={() => deleteCt(ct.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors outline-none" title="Delete CT"><Trash2 size={16} /></button>
+                             </div>
                           </div>
                         ))}
                      </div>
@@ -2926,7 +3252,10 @@ ${msg}`;
                                 <p className="text-xs font-semibold text-slate-500 truncate mt-0.5">{ass.topic}</p>
                                 <p className={`text-[11px] font-bold mt-2 flex items-center gap-1 ${ass.completed ? 'text-slate-400' : 'text-blue-600 dark:text-blue-400'}`}><Calendar size={12}/> Due: {new Date(ass.deadline).toLocaleDateString('en-US', {day:'numeric', month:'short', year:'numeric'})}</p>
                              </div>
-                             <button onClick={() => deleteAssignment(ass.id)} className="opacity-0 group-hover:opacity-100 self-start p-1.5 text-slate-400 hover:text-red-500 transition-colors outline-none"><Trash2 size={16} /></button>
+                             <div className="opacity-0 group-hover:opacity-100 flex gap-1 self-start">
+                               <button onClick={() => setEditingAssignment(ass)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors outline-none" title="Edit Assignment"><Edit2 size={16} /></button>
+                               <button onClick={() => deleteAssignment(ass.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors outline-none" title="Delete Assignment"><Trash2 size={16} /></button>
+                             </div>
                           </div>
                         ))}
                      </div>
@@ -3076,31 +3405,53 @@ ${msg}`;
                               <cat.icon className={cat.color} size={18} />
                               <h4 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">{cat.label}</h4>
                             </div>
-                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded-md shadow-sm border border-white/40 dark:border-white/5">{list.length}</span>
+                            <div className="flex items-center gap-2">
+                              {k === 'materials' && (
+                                <>
+                                  <button onClick={() => sendOtpForMaterialDelete()} className="p-1 hover:bg-red-500/10 text-slate-400 hover:text-red-500 rounded-lg transition-colors outline-none cursor-pointer" title="Delete All Materials"><Trash2 size={14} /></button>
+                                  <button onClick={() => setIsMaterialsModalOpen(true)} className="p-1 hover:bg-blue-500/10 text-slate-400 hover:text-blue-500 rounded-lg transition-colors outline-none cursor-pointer" title="Expand Materials"><Maximize2 size={14} /></button>
+                                </>
+                              )}
+                              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded-md shadow-sm border border-white/40 dark:border-white/5">{list.length}</span>
+                            </div>
                           </div>
                           <div className="p-3 space-y-2 overflow-y-auto flex-grow custom-scrollbar">
                             {list.length === 0 ? (
                                <div className="h-full flex items-center justify-center text-xs font-medium text-slate-500">No links here yet.</div>
                             ) : (
-                              list.map(l => (
-                                <div key={l.id} className={`group flex items-center justify-between p-3 rounded-xl border transition-colors hover:-translate-y-0.5 shadow-sm hover:shadow-md ${l.starred ? 'border-amber-300/60 dark:border-amber-500/40 bg-amber-50/80 dark:bg-amber-500/10' : 'border-white/40 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 hover:bg-white/70 dark:hover:bg-slate-700/60'}`}>
-                                  <div className="flex items-center gap-3 overflow-hidden outline-none flex-grow pr-2">
-                                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStarLink(l); }} className={`shrink-0 p-1.5 rounded-lg transition-all outline-none ${l.starred ? 'text-amber-500 hover:text-amber-600 bg-amber-100/50 dark:bg-amber-900/30' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 group-hover:text-amber-400/70 hover:bg-white/60 dark:hover:bg-slate-700/60'}`}>
-                                      <Star size={16} className={l.starred ? "fill-amber-500" : ""} />
-                                    </button>
-                                    <a href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 overflow-hidden outline-none flex-grow">
-                                      <div className={`p-2 rounded-lg transition-colors shrink-0 shadow-sm border border-white/40 dark:border-white/5 ${l.starred ? 'bg-amber-100/80 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-700/50' : 'bg-white/60 dark:bg-slate-800/60 text-slate-500 group-hover:text-emerald-500 group-hover:bg-emerald-50/80 dark:group-hover:bg-emerald-500/20'}`}>
-                                        <ExternalLink size={14} />
-                                      </div>
-                                      <div className="overflow-hidden">
-                                        <p className={`font-bold text-sm truncate ${l.starred ? 'text-amber-700 dark:text-amber-300' : 'text-slate-800 dark:text-slate-200'}`}>{l.title}</p>
-                                        <p className={`text-xs font-medium truncate mt-0.5 ${l.starred ? 'text-amber-600/70 dark:text-amber-400/70' : 'text-slate-500 dark:text-slate-400'}`}>{l.url.replace(/^https?:\/\//, '')}</p>
-                                      </div>
-                                    </a>
+                              list.map(l => {
+                                const branding = getLinkBranding(l.url);
+                                const BrandIcon = branding.icon;
+                                return (
+                                  <div key={l.id} className={`group flex items-center justify-between p-3 rounded-xl border transition-all hover:-translate-y-0.5 shadow-sm hover:shadow-md ${l.starred ? `${branding.starBorder} ${branding.starBg}` : 'border-white/40 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 hover:bg-white/70 dark:hover:bg-slate-700/60'}`}>
+                                    <div className="flex items-center gap-3 overflow-hidden outline-none flex-grow pr-2">
+                                      <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStarLink(l); }} className={`shrink-0 p-1.5 rounded-lg transition-all outline-none ${l.starred ? `${branding.starText} ${branding.starBg} border ${branding.starBorder}` : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 group-hover:text-amber-400/70 hover:bg-white/60 dark:hover:bg-slate-700/60'}`}>
+                                        <Star size={16} className={l.starred ? `fill-current ${branding.color}` : ""} />
+                                      </button>
+                                      <a href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 overflow-hidden outline-none flex-grow">
+                                        <div className={`p-2 rounded-lg transition-colors shrink-0 shadow-sm border ${l.starred ? `${branding.starBg} ${branding.color} ${branding.starBorder}` : `bg-white/60 dark:bg-slate-800/60 text-slate-500 ${branding.hoverText} group-hover:bg-slate-100 dark:group-hover:bg-slate-700`}`}>
+                                          <BrandIcon size={14} />
+                                        </div>
+                                        <div className="overflow-hidden">
+                                          <p className={`font-bold text-sm truncate ${l.starred ? branding.starText : 'text-slate-800 dark:text-slate-200'}`}>{l.title}</p>
+                                          <p className={`text-xs font-medium truncate mt-0.5 ${l.starred ? `${branding.starText} opacity-70` : 'text-slate-500 dark:text-slate-400'}`}>{l.url.replace(/^https?:\/\//, '')}</p>
+                                          {l.category === 'materials' && l.materialTypes && l.materialTypes.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {l.materialTypes.map(type => (
+                                                <span key={type} className="px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[9px] font-bold text-slate-500 dark:text-slate-400 capitalize">{type}</span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </a>
+                                    </div>
+                                    <div className="opacity-0 group-hover:opacity-100 flex gap-1 shrink-0">
+                                      <button onClick={() => setEditingLink(l)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-all outline-none" title="Edit Link"><Edit2 size={14} /></button>
+                                      <button onClick={() => deleteLink(l.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-all outline-none" title="Delete Link"><Trash2 size={14} /></button>
+                                    </div>
                                   </div>
-                                  <button onClick={() => deleteLink(l.id)} className="shrink-0 opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all outline-none"><Trash2 size={16} /></button>
-                                </div>
-                              ))
+                                );
+                              })
                             )}
                           </div>
                         </div>
@@ -3653,7 +4004,10 @@ ${msg}`;
                             </div>
                           )}
                         </div>
-                        <button onClick={() => deleteVaultLink(v.id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 outline-none bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg border border-white/40 dark:border-white/5 shadow-sm border-none"><Trash2 size={18} /></button>
+                        <div className="opacity-0 group-hover:opacity-100 flex gap-1 items-center shrink-0">
+                          <button onClick={() => setEditingVaultLink(v)} className="p-2 text-slate-500 hover:text-blue-500 transition-colors outline-none bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg border border-white/40 dark:border-white/5 shadow-sm" title="Edit Secure Link"><Edit2 size={14} /></button>
+                          <button onClick={() => deleteVaultLink(v.id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors outline-none bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-lg border border-white/40 dark:border-white/5 shadow-sm" title="Delete Secure Link"><Trash2 size={14} /></button>
+                        </div>
                       </div>
                     )) : <div className="py-12 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400"><Vault size={40} className="mb-3 opacity-50" /><p className="text-sm font-bold">Your vault is empty and secure.</p></div>}
                   </div>
@@ -3690,7 +4044,83 @@ ${msg}`;
               
               <form onSubmit={addLink} className="space-y-4 relative z-20">
                 <input required value={newLink.title} onChange={e => setNewLink({...newLink, title: e.target.value})} placeholder="Website Title" className="w-full p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-white/60 dark:border-white/10 shadow-inner text-sm font-semibold focus:border-emerald-500 dark:text-white outline-none" />
-                <GlassSelect value={newLink.category} onChange={val => setNewLink({...newLink, category: val})} options={CATEGORY_ORDER.map(k => ({value: k, label: CATEGORIES[k.toUpperCase()].label}))} />
+                <GlassSelect value={newLink.category} onChange={val => setNewLink({...newLink, category: val, materialTypes: val === 'materials' ? [] : (newLink.materialTypes || [])})} options={CATEGORY_ORDER.map(k => ({value: k, label: CATEGORIES[k.toUpperCase()].label}))} />
+                
+                {newLink.category === 'materials' && (
+                  <div className="bg-slate-100/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-white/40 dark:border-white/5 space-y-3">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Material Type (Select multiple)</span>
+                    <div className="flex flex-col gap-2 max-h-[150px] overflow-y-auto custom-scrollbar pr-1">
+                      {materialTypes.map(type => (
+                        <label key={type} className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={newLink.materialTypes?.includes(type)}
+                            onChange={e => {
+                              const list = newLink.materialTypes || [];
+                              const updated = e.target.checked 
+                                ? [...list, type] 
+                                : list.filter(t => t !== type);
+                              setNewLink({...newLink, materialTypes: updated});
+                            }}
+                            className="rounded text-emerald-500 focus:ring-emerald-500 w-4 h-4"
+                          />
+                          {type}
+                        </label>
+                      ))}
+                    </div>
+                    
+                    {isAddingCustomMaterialType ? (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input 
+                          type="text" 
+                          placeholder="Custom Type" 
+                          value={customMaterialTypeInput}
+                          onChange={e => setCustomMaterialTypeInput(e.target.value)}
+                          className="flex-grow px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs outline-none dark:text-white"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if (customMaterialTypeInput.trim()) {
+                              const newType = customMaterialTypeInput.trim();
+                              if (!materialTypes.includes(newType)) {
+                                setMaterialTypes([...materialTypes, newType]);
+                              }
+                              setNewLink({
+                                ...newLink, 
+                                materialTypes: [...(newLink.materialTypes || []), newType]
+                              });
+                            }
+                            setCustomMaterialTypeInput('');
+                            setIsAddingCustomMaterialType(false);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg font-bold text-xs"
+                        >
+                          Add
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setCustomMaterialTypeInput('');
+                            setIsAddingCustomMaterialType(false);
+                          }}
+                          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        type="button" 
+                        onClick={() => setIsAddingCustomMaterialType(true)}
+                        className="mt-2 text-xs text-emerald-500 hover:text-emerald-600 font-bold flex items-center gap-1"
+                      >
+                        <Plus size={14} /> Add Custom Type
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <input required value={newLink.url} onChange={e => setNewLink({...newLink, url: e.target.value})} placeholder="URL (e.g., elms.uiu.ac.bd)" className="w-full p-3.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-white/60 dark:border-white/10 shadow-inner text-sm font-semibold focus:border-emerald-500 dark:text-white outline-none" />
                 <div className="flex justify-end pt-4">
                   <button type="submit" className="w-full py-3.5 bg-emerald-500/90 backdrop-blur-md hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/30 border border-white/20 transition-colors active:scale-95 outline-none">Save Link</button>
@@ -3752,7 +4182,7 @@ ${msg}`;
       )}
 
       {/* TOAST NOTIFICATIONS PORTAL CONTAINER */}
-      <div className="fixed bottom-24 right-6 sm:bottom-12 sm:right-12 z-[200] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+      <div className="fixed bottom-24 left-4 right-4 sm:left-auto sm:right-12 sm:bottom-12 z-[200] flex flex-col gap-2 max-w-sm w-auto sm:w-full pointer-events-none">
         {toasts.map(toast => (
           <div key={toast.id} className={`toast-card pointer-events-auto p-4 rounded-2xl shadow-xl flex items-center gap-3 border ${
             toast.type === 'success' 
@@ -3932,6 +4362,384 @@ ${msg}`;
         onSaveCustomApiKey={handleSaveCustomApiKey}
       />
 
+      {editingStudyPlan && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setEditingStudyPlan(null)}>
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-blue-500/30 shadow-2xl w-full max-w-md relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setEditingStudyPlan(null)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shadow-sm border border-white/40 dark:border-white/10 outline-none"><X size={20} /></button>
+            <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><CheckSquare size={20} className="text-blue-500" /> Edit Study Plan</h3>
+            <form onSubmit={editStudyPlanHandler} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Subject / Topic</label>
+                <input required type="text" value={editingStudyPlan.topic} onChange={(e) => setEditingStudyPlan({...editingStudyPlan, topic: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Date</label>
+                <input required type="date" value={editingStudyPlan.date} onChange={(e) => setEditingStudyPlan({...editingStudyPlan, date: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Time Slot</label>
+                <input type="text" value={editingStudyPlan.timeSlot || ''} onChange={(e) => setEditingStudyPlan({...editingStudyPlan, timeSlot: e.target.value})} placeholder="e.g. 8 PM - 10 PM" className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Priority</label>
+                <div className="flex bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-1.5 rounded-xl gap-1 border border-white/40 dark:border-white/5">
+                  {['low', 'medium', 'high'].map(p => {
+                    let activeClass = 'text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200';
+                    if (editingStudyPlan.priority === p) {
+                      if (p === 'low') activeClass = 'bg-blue-500/90 text-white shadow-md';
+                      if (p === 'medium') activeClass = 'bg-orange-500/90 text-white shadow-md';
+                      if (p === 'high') activeClass = 'bg-red-500/90 text-white shadow-md';
+                    }
+                    return (
+                      <button key={p} type="button" onClick={() => setEditingStudyPlan({...editingStudyPlan, priority: p})} className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold capitalize transition-all outline-none ${activeClass}`}>{p}</button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setEditingStudyPlan(null)} className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-colors border border-black/5 dark:border-white/5">Cancel</button>
+                <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 transition-colors">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingCt && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setEditingCt(null)}>
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-blue-500/30 shadow-2xl w-full max-w-md relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setEditingCt(null)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shadow-sm border border-white/40 dark:border-white/10 outline-none"><X size={20} /></button>
+            <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><AlertCircle size={20} className="text-blue-500" /> Edit Class Test</h3>
+            <form onSubmit={editCtHandler} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Course Name / Code</label>
+                <input required type="text" value={editingCt.course} onChange={(e) => setEditingCt({...editingCt, course: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Topic / Syllabus</label>
+                <input required type="text" value={editingCt.topic} onChange={(e) => setEditingCt({...editingCt, topic: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Date</label>
+                <input required type="date" value={editingCt.deadline} onChange={(e) => setEditingCt({...editingCt, deadline: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setEditingCt(null)} className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-colors border border-black/5 dark:border-white/5">Cancel</button>
+                <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 transition-colors">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingAssignment && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setEditingAssignment(null)}>
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-blue-500/30 shadow-2xl w-full max-w-md relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setEditingAssignment(null)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shadow-sm border border-white/40 dark:border-white/10 outline-none"><X size={20} /></button>
+            <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><FileText size={20} className="text-blue-500" /> Edit Assignment</h3>
+            <form onSubmit={editAssignmentHandler} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Course Name / Code</label>
+                <input required type="text" value={editingAssignment.course} onChange={(e) => setEditingAssignment({...editingAssignment, course: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Topic / Syllabus</label>
+                <input required type="text" value={editingAssignment.topic} onChange={(e) => setEditingAssignment({...editingAssignment, topic: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Date</label>
+                <input required type="date" value={editingAssignment.deadline} onChange={(e) => setEditingAssignment({...editingAssignment, deadline: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setEditingAssignment(null)} className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-colors border border-black/5 dark:border-white/5">Cancel</button>
+                <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 transition-colors">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingLink && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setEditingLink(null)}>
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-blue-500/30 shadow-2xl w-full max-w-md relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setEditingLink(null)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shadow-sm border border-white/40 dark:border-white/10 outline-none"><X size={20} /></button>
+            <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><LinkIcon size={20} className="text-blue-500" /> Edit Resource Link</h3>
+            <form onSubmit={editLinkHandler} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Link Title</label>
+                <input required type="text" value={editingLink.title} onChange={(e) => setEditingLink({...editingLink, title: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Category</label>
+                <GlassSelect value={editingLink.category} onChange={val => setEditingLink({...editingLink, category: val, materialTypes: val === 'materials' ? (editingLink.materialTypes || []) : []})} options={CATEGORY_ORDER.map(k => ({value: k, label: CATEGORIES[k.toUpperCase()].label}))} />
+              </div>
+              
+              {editingLink.category === 'materials' && (
+                <div className="bg-slate-100/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-white/40 dark:border-white/5 space-y-3">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Material Type (Select multiple)</span>
+                  <div className="flex flex-col gap-2 max-h-[150px] overflow-y-auto custom-scrollbar pr-1">
+                    {materialTypes.map(type => (
+                      <label key={type} className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={editingLink.materialTypes?.includes(type)}
+                          onChange={e => {
+                            const list = editingLink.materialTypes || [];
+                            const updated = e.target.checked 
+                              ? [...list, type] 
+                              : list.filter(t => t !== type);
+                            setEditingLink({...editingLink, materialTypes: updated});
+                          }}
+                          className="rounded text-blue-500 focus:ring-blue-500 w-4 h-4"
+                        />
+                        {type}
+                      </label>
+                    ))}
+                  </div>
+                  
+                  {isAddingCustomMaterialType ? (
+                    <div className="flex items-center gap-2 mt-2">
+                      <input 
+                        type="text" 
+                        placeholder="Custom Type" 
+                        value={customMaterialTypeInput}
+                        onChange={e => setCustomMaterialTypeInput(e.target.value)}
+                        className="flex-grow px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs outline-none dark:text-white"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (customMaterialTypeInput.trim()) {
+                            const newType = customMaterialTypeInput.trim();
+                            if (!materialTypes.includes(newType)) {
+                              setMaterialTypes([...materialTypes, newType]);
+                            }
+                            setEditingLink({
+                              ...editingLink, 
+                              materialTypes: [...(editingLink.materialTypes || []), newType]
+                            });
+                          }
+                          setCustomMaterialTypeInput('');
+                          setIsAddingCustomMaterialType(false);
+                        }}
+                        className="px-3 py-1.5 bg-blue-500 text-white rounded-lg font-bold text-xs"
+                      >
+                        Add
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setCustomMaterialTypeInput('');
+                          setIsAddingCustomMaterialType(false);
+                        }}
+                        className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      type="button" 
+                      onClick={() => setIsAddingCustomMaterialType(true)}
+                      className="mt-2 text-xs text-blue-500 hover:text-blue-600 font-bold flex items-center gap-1"
+                    >
+                      <Plus size={14} /> Add Custom Type
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">URL</label>
+                <input required type="text" value={editingLink.url} onChange={(e) => setEditingLink({...editingLink, url: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setEditingLink(null)} className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-colors border border-black/5 dark:border-white/5">Cancel</button>
+                <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 transition-colors">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingVaultLink && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setEditingVaultLink(null)}>
+          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-blue-500/30 shadow-2xl w-full max-w-md relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setEditingVaultLink(null)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shadow-sm border border-white/40 dark:border-white/10 outline-none"><X size={20} /></button>
+            <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><Vault size={20} className="text-blue-500 animate-pulse" /> Edit Secure Link</h3>
+            <form onSubmit={editVaultLinkHandler} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Title</label>
+                <input required type="text" value={editingVaultLink.title} onChange={(e) => setEditingVaultLink({...editingVaultLink, title: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Secure URL</label>
+                <input required type="text" value={editingVaultLink.url} onChange={(e) => setEditingVaultLink({...editingVaultLink, url: e.target.value})} className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Hint / Decoy Description</label>
+                <input type="text" value={editingVaultLink.hint || ''} onChange={(e) => setEditingVaultLink({...editingVaultLink, hint: e.target.value})} placeholder="Hint to remember what this is" className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-white/60 dark:border-white/10 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500/50 dark:text-white outline-none" />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setEditingVaultLink(null)} className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-colors border border-black/5 dark:border-white/5">Cancel</button>
+                <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 transition-colors">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MATERIALS EXPANDABLE MODAL */}
+      {isMaterialsModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsMaterialsModalOpen(false)}>
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setIsMaterialsModalOpen(false)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors outline-none shadow-sm border border-white/40 dark:border-white/10"><X size={20} /></button>
+            
+            <div className="mb-6 flex items-center gap-3">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-white/40 dark:border-white/5 shadow-sm"><BookOpen size={24} /></div>
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-800 dark:text-white">Study Materials Segment</h3>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Class slides, notes, question banks, and helpful directories</p>
+              </div>
+            </div>
+
+            {/* Sub-tab navigation filtering by Material Types */}
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar pr-1">
+              <button 
+                onClick={() => setActiveMaterialTypeTab('all')} 
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border outline-none whitespace-nowrap cursor-pointer ${activeMaterialTypeTab === 'all' ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-white/40 dark:bg-slate-800/40 border-white/60 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800'}`}
+              >
+                All Materials ({links.filter(l => l.category === 'materials').length})
+              </button>
+              {materialTypes.map(type => {
+                const count = links.filter(l => l.category === 'materials' && l.materialTypes?.includes(type)).length;
+                return (
+                  <button 
+                    key={type}
+                    onClick={() => setActiveMaterialTypeTab(type)} 
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border outline-none whitespace-nowrap capitalize cursor-pointer ${activeMaterialTypeTab === type ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-white/40 dark:bg-slate-800/40 border-white/60 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800'}`}
+                  >
+                    {type} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-[300px] mb-4">
+              {(() => {
+                const filtered = links.filter(l => {
+                  if (l.category !== 'materials') return false;
+                  if (activeMaterialTypeTab === 'all') return true;
+                  return l.materialTypes?.includes(activeMaterialTypeTab);
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-400 py-12">
+                      <BookOpen size={48} className="opacity-20 mb-3" />
+                      <p className="text-sm font-bold">No materials found in this category.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {filtered.map(l => {
+                      const branding = getLinkBranding(l.url);
+                      const BrandIcon = branding.icon;
+                      return (
+                        <div key={l.id} className={`group flex items-center justify-between p-4 rounded-2xl border transition-all hover:-translate-y-0.5 shadow-sm hover:shadow-md ${l.starred ? `${branding.starBorder} ${branding.starBg}` : 'border-white/40 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 hover:bg-white/70 dark:hover:bg-slate-700/60'}`}>
+                          <div className="flex items-center gap-3 overflow-hidden outline-none flex-grow pr-2">
+                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStarLink(l); }} className={`shrink-0 p-1.5 rounded-lg transition-all outline-none ${l.starred ? `${branding.starText} ${branding.starBg} border ${branding.starBorder}` : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 group-hover:text-amber-400/70 hover:bg-white/60 dark:hover:bg-slate-700/60'}`}>
+                              <Star size={16} className={l.starred ? `fill-current ${branding.color}` : ""} />
+                            </button>
+                            <a href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 overflow-hidden outline-none flex-grow">
+                              <div className={`p-2 rounded-lg transition-colors shrink-0 shadow-sm border ${l.starred ? `${branding.starBg} ${branding.color} ${branding.starBorder}` : `bg-white/60 dark:bg-slate-800/60 text-slate-500 ${branding.hoverText} group-hover:bg-slate-100 dark:group-hover:bg-slate-700`}`}>
+                                <BrandIcon size={16} />
+                              </div>
+                              <div className="overflow-hidden">
+                                <p className={`font-bold text-sm truncate ${l.starred ? branding.starText : 'text-slate-800 dark:text-slate-200'}`}>{l.title}</p>
+                                <p className={`text-xs font-medium truncate mt-0.5 ${l.starred ? `${branding.starText} opacity-70` : 'text-slate-500 dark:text-slate-400'}`}>{l.url.replace(/^https?:\/\//, '')}</p>
+                                {l.materialTypes && l.materialTypes.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {l.materialTypes.map(t => (
+                                      <span key={t} className="px-2 py-0.5 rounded bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[9px] font-bold text-slate-500 dark:text-slate-400 capitalize">{t}</span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </a>
+                          </div>
+                          <div className="opacity-0 group-hover:opacity-100 flex gap-1 shrink-0">
+                            <button onClick={() => setEditingLink(l)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-all outline-none" title="Edit Link"><Edit2 size={16} /></button>
+                            <button onClick={() => deleteLink(l.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-all outline-none" title="Delete Link"><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+            
+            <div className="pt-4 border-t border-white/40 dark:border-white/10 flex justify-between items-center">
+              <button onClick={() => { setIsMaterialsModalOpen(false); sendOtpForMaterialDelete(); }} className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl font-bold text-xs transition-all flex items-center gap-2 outline-none border border-red-500/10 cursor-pointer"><Trash2 size={14} /> Clear All Trimester Materials</button>
+              <button onClick={() => { setIsMaterialsModalOpen(false); setIsAddingLink(true); setNewLink({...newLink, category: 'materials', materialTypes: activeMaterialTypeTab !== 'all' ? [activeMaterialTypeTab] : []}); }} className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-500/25 transition-all flex items-center gap-1.5 outline-none border border-white/10 cursor-pointer"><Plus size={14} /> Add Material Link</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OTP VERIFICATION MODAL */}
+      {isOtpModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsOtpModalOpen(false)}>
+          <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full text-center space-y-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="w-16 h-16 bg-red-500/10 dark:bg-red-500/25 border border-red-500/25 rounded-3xl flex items-center justify-center text-red-500 mx-auto">
+              <ShieldAlert size={32} />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-white">Verify Your Action</h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
+                You are about to delete <span className="font-extrabold text-red-500">ALL</span> academic materials. Enter the 6-digit verification code sent to your email <span className="font-extrabold text-slate-800 dark:text-white">{user?.email}</span> to confirm.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <input 
+                type="text" 
+                maxLength={6}
+                value={userOtpInput}
+                onChange={e => setUserOtpInput(e.target.value.replace(/\D/g, ''))}
+                placeholder="Enter 6-Digit OTP" 
+                className="w-full text-center tracking-[0.5em] font-extrabold text-lg px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-red-500/50 dark:text-white outline-none"
+              />
+              <div className="bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/15 rounded-xl p-3 text-left">
+                <span className="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider block mb-1">Developer Helper Tooltip</span>
+                <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">Since this is a client-side simulated action, your code is: <span className="font-extrabold text-orange-600 dark:text-orange-400">{generatedOtp}</span></p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                type="button"
+                onClick={() => setIsOtpModalOpen(false)}
+                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-all outline-none border border-black/5 dark:border-white/5 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={executeBatchDeleteMaterials}
+                className="py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-xs shadow-md shadow-red-500/10 active:scale-95 transition-all outline-none border border-white/10 cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CALENDAR IMPORT CONFIRMATION MODAL */}
       {importConfirmData && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
@@ -4034,6 +4842,49 @@ ${msg}`;
               <span>Calendar by @monzim/calendar</span>
               <span className="text-slate-400 dark:text-zinc-600">Double click or click any class slot to view details</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* PWA INSTALLATION BANNER */}
+      {isMobileDevice && !dismissedInstallBanner && (deferredPrompt || isIosSafari) && (
+        <div className="fixed bottom-24 left-4 right-4 z-[110] bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col gap-4 animate-in slide-in-from-bottom-8 duration-300">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-orange-500/10 border border-orange-500/20 text-orange-500 rounded-2xl shrink-0">
+                <Sparkles size={20} className="animate-pulse" />
+              </div>
+              <div className="text-left">
+                <h4 className="text-sm font-extrabold text-slate-800 dark:text-white">Install StudyFlow App</h4>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                  {isIosSafari 
+                    ? "Tap the Share button ⇧ and select 'Add to Home Screen' for a native-like experience." 
+                    : "Install the web application to run full-screen with native performance."}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setDismissedInstallBanner(true)} 
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors outline-none shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex items-center gap-3 w-full">
+            {!isIosSafari && (
+              <button 
+                onClick={handleInstallClick}
+                className="flex-grow bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-md active:scale-98 transition-all cursor-pointer outline-none text-center"
+              >
+                Install
+              </button>
+            )}
+            <button 
+              onClick={() => setDismissedInstallBanner(true)}
+              className="flex-grow bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-2.5 rounded-xl text-xs font-bold active:scale-98 transition-all cursor-pointer outline-none text-center"
+            >
+              Dismiss
+            </button>
           </div>
         </div>
       )}

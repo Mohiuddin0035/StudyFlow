@@ -39,14 +39,25 @@ const StudyFlowAIChatbot = ({
   }, [chatMessages, isOpen, showSettings]);
 
   const assembleContext = () => {
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    const jsDayToName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const todayDayName = jsDayToName[new Date().getDay()];
+    const tzOptions = { timeZone: 'Asia/Dhaka' };
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-CA', tzOptions);
+    const todayDayName = now.toLocaleDateString('en-US', { ...tzOptions, weekday: 'long' });
+    const currentDateTimeStr = now.toLocaleString('en-US', {
+      ...tzOptions,
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
 
     const todayClasses = routine.filter(r => r.day.toLowerCase() === todayDayName.toLowerCase());
 
     let ctx = `You are Flowy, a helpful and friendly academic companion for the student ${user?.displayName || 'User'}.
-Current Time: ${new Date().toLocaleString()} (Today is ${todayDayName}, ${todayStr}).
+Current Time: ${currentDateTimeStr} (Today is ${todayDayName}, ${todayStr}).
 
 Here is the student's current workspace data:
 
@@ -89,6 +100,7 @@ INSTRUCTIONS:
 
   const callChatbotAPI = async (messagesList) => {
     const defaultKeys = [
+      
       //keys
     ];
 
@@ -96,9 +108,8 @@ INSTRUCTIONS:
     const keys = customApiKey ? [customApiKey, ...defaultKeys] : defaultKeys;
 
     const models = [
-      "google/gemini-2.5-flash:free",
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "liquid/lfm-2.5-1.2b-instruct:free"
+      "openrouter/free",
+      "meta-llama/llama-3.2-3b-instruct:free"
     ];
 
     const makeRequest = async (key, model) => {
@@ -123,11 +134,18 @@ INSTRUCTIONS:
       });
       
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("KEY_AUTH_FAILED");
+        }
         throw new Error(`API Error: ${res.status}`);
       }
       
       const data = await res.json();
       if (data.error) {
+        const code = data.error.code;
+        if (code === 401 || code === 403) {
+          throw new Error("KEY_AUTH_FAILED");
+        }
         throw new Error(`OpenRouter Error: ${data.error.message || data.error}`);
       }
       
@@ -141,6 +159,9 @@ INSTRUCTIONS:
           if (reply) return reply;
         } catch (e) {
           console.warn(`Model ${model} failed with key:`, e);
+          if (e.message === "KEY_AUTH_FAILED") {
+            break; // Skip other models for this key
+          }
         }
       }
     }
