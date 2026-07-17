@@ -4603,26 +4603,20 @@ ${msg}`;
               </div>
             </div>
 
-            {/* Sub-tab navigation filtering by Material Types */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar pr-1">
-              <button 
-                onClick={() => setActiveMaterialTypeTab('all')} 
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border outline-none whitespace-nowrap cursor-pointer ${activeMaterialTypeTab === 'all' ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-white/40 dark:bg-slate-800/40 border-white/60 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800'}`}
-              >
-                All Materials ({links.filter(l => l.category === 'materials').length})
-              </button>
-              {materialTypes.map(type => {
-                const count = links.filter(l => l.category === 'materials' && l.materialTypes?.includes(type)).length;
-                return (
-                  <button 
-                    key={type}
-                    onClick={() => setActiveMaterialTypeTab(type)} 
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border outline-none whitespace-nowrap capitalize cursor-pointer ${activeMaterialTypeTab === type ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-white/40 dark:bg-slate-800/40 border-white/60 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800'}`}
-                  >
-                    {type} ({count})
-                  </button>
-                );
-              })}
+            {/* Sub-tab navigation filtering by Material Types using GlassSelect Dropdown */}
+            <div className="mb-6 w-full sm:max-w-xs relative z-30">
+              <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-2">Filter Material Type</label>
+              <GlassSelect 
+                value={activeMaterialTypeTab} 
+                onChange={val => setActiveMaterialTypeTab(val)} 
+                options={[
+                  { value: 'all', label: `All Materials (${links.filter(l => l.category === 'materials').length})` },
+                  ...materialTypes.map(type => {
+                    const count = links.filter(l => l.category === 'materials' && l.materialTypes?.includes(type)).length;
+                    return { value: type, label: `${type} (${count})` };
+                  })
+                ]} 
+              />
             </div>
 
             <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-[300px] mb-4">
@@ -4682,10 +4676,12 @@ ${msg}`;
               })()}
             </div>
             
-            <div className="pt-4 border-t border-white/40 dark:border-white/10 flex justify-between items-center">
-              <button onClick={() => { setIsMaterialsModalOpen(false); sendOtpForMaterialDelete(); }} className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl font-bold text-xs transition-all flex items-center gap-2 outline-none border border-red-500/10 cursor-pointer"><Trash2 size={14} /> Clear All Trimester Materials</button>
-              <button onClick={() => { setIsMaterialsModalOpen(false); setIsAddingLink(true); setNewLink({...newLink, category: 'materials', materialTypes: activeMaterialTypeTab !== 'all' ? [activeMaterialTypeTab] : []}); }} className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-500/25 transition-all flex items-center gap-1.5 outline-none border border-white/10 cursor-pointer"><Plus size={14} /> Add Material Link</button>
-            </div>
+            {!isMobileDevice && (
+              <div className="pt-4 border-t border-white/40 dark:border-white/10 flex justify-between items-center">
+                <button onClick={() => { setIsMaterialsModalOpen(false); sendOtpForMaterialDelete(); }} className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl font-bold text-xs transition-all flex items-center gap-2 outline-none border border-red-500/10 cursor-pointer"><Trash2 size={14} /> Clear All Trimester Materials</button>
+                <button onClick={() => { setIsMaterialsModalOpen(false); setIsAddingLink(true); setNewLink({...newLink, category: 'materials', materialTypes: activeMaterialTypeTab !== 'all' ? [activeMaterialTypeTab] : []}); }} className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-500/25 transition-all flex items-center gap-1.5 outline-none border border-white/10 cursor-pointer"><Plus size={14} /> Add Material Link</button>
+              </div>
+            )}
           </div>
         </div>
       )}
