@@ -606,6 +606,7 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIosSafari, setIsIosSafari] = useState(false);
   const [dismissedInstallBanner, setDismissedInstallBanner] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -633,6 +634,14 @@ export default function App() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
+
+  useEffect(() => {
+    setIsTransitioning(true);
+    const timer = setTimeout(() => {
+      setIsTransitioning(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [sessionActiveUser]);
 
   useEffect(() => {
     // 1. Programmatically generate a pixel-perfect QR code for the GitHub profile link
@@ -2151,6 +2160,16 @@ ${msg}`;
     </button>
   );
 
+  const renderTransitionOverlay = () => {
+    return (
+      <div className={`fixed inset-0 z-[99999] backdrop-blur-2xl bg-white/40 dark:bg-slate-950/40 transition-all duration-400 ease-in-out pointer-events-none flex items-center justify-center ${isTransitioning ? 'opacity-100 scale-100' : 'opacity-0 scale-105 pointer-events-none'}`}>
+        <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-orange-500/25">
+          <School size={32} className="animate-pulse" />
+        </div>
+      </div>
+    );
+  };
+
   // --- RENDER LOGIC ---
   if (authLoading) {
     return (
@@ -2185,8 +2204,14 @@ ${msg}`;
               </p>
               <button 
                 onClick={() => {
-                  setDismissedMobileWarning(true);
-                  setShowCover(false); // head straight to login
+                  setIsTransitioning(true);
+                  setTimeout(() => {
+                    setDismissedMobileWarning(true);
+                    setShowCover(false);
+                  }, 200);
+                  setTimeout(() => {
+                    setIsTransitioning(false);
+                  }, 500);
                 }}
                 className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white py-3.5 px-6 rounded-2xl font-bold text-xs md:text-sm shadow-lg shadow-orange-500/10 active:scale-95 transition-all outline-none border border-white/10 cursor-pointer"
               >
@@ -2309,7 +2334,15 @@ ${msg}`;
                 {/* Main Action Buttons */}
                 <div className="flex flex-wrap gap-4 w-full sm:w-auto">
                   <button 
-                    onClick={() => setShowCover(false)} 
+                    onClick={() => {
+                      setIsTransitioning(true);
+                      setTimeout(() => {
+                        setShowCover(false);
+                      }, 200);
+                      setTimeout(() => {
+                        setIsTransitioning(false);
+                      }, 500);
+                    }} 
                     className="group relative bg-orange-500 hover:bg-orange-600 text-white px-8 py-3.5 rounded-2xl font-bold text-xs md:text-sm flex items-center justify-center gap-2.5 transition-all shadow-[0_8px_30px_rgb(249,115,22,0.15)] hover:shadow-[0_8px_30px_rgb(249,115,22,0.35)] active:scale-95 outline-none overflow-hidden cursor-pointer"
                   >
                     <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
@@ -2398,6 +2431,7 @@ ${msg}`;
             </div>
           </footer>
           {renderLanyardModal()}
+          {renderTransitionOverlay()}
         </div>
       );
   }
@@ -2415,7 +2449,15 @@ ${msg}`;
         
         {/* Back Button to Cover Page */}
         <button 
-          onClick={() => setShowCover(true)}
+          onClick={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setShowCover(true);
+            }, 200);
+            setTimeout(() => {
+              setIsTransitioning(false);
+            }, 500);
+          }}
           className="absolute top-6 left-6 flex items-center gap-1.5 text-slate-500 hover:text-orange-500 dark:text-slate-400 dark:hover:text-orange-400 transition-colors z-50 font-bold text-sm outline-none bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-xl shadow-sm border border-slate-200/50 dark:border-white/10 cursor-pointer"
         >
           <ArrowLeft size={16} /> Back
@@ -2503,6 +2545,7 @@ ${msg}`;
           </div>
 
         </div>
+        {renderTransitionOverlay()}
       </div>
     );
   }
@@ -3425,8 +3468,8 @@ ${msg}`;
                       });
 
                       return (
-                        <div key={k} className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 overflow-hidden flex flex-col h-[380px] shadow-xl shadow-slate-200/20 dark:shadow-black/20 hover:shadow-2xl transition-all duration-200">
-                          <div className={`px-5 py-4 flex items-center justify-between border-b border-white/40 dark:border-white/10 backdrop-blur-md ${cat.bg}`}>
+                        <div key={k} className={`bg-white/80 dark:bg-slate-900/90 ${isMobileDevice ? 'backdrop-blur-2xl' : ''} rounded-3xl border border-white/50 dark:border-white/10 overflow-hidden flex flex-col h-[380px] shadow-xl shadow-slate-200/20 dark:shadow-black/20 hover:shadow-2xl transition-all duration-200`}>
+                          <div className={`px-5 py-4 flex items-center justify-between border-b border-white/40 dark:border-white/10 ${isMobileDevice ? 'backdrop-blur-md' : ''} ${cat.bg}`}>
                             <div className="flex items-center gap-3">
                               <cat.icon className={cat.color} size={18} />
                               <h4 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">{cat.label}</h4>
@@ -3441,7 +3484,7 @@ ${msg}`;
                               <span className="text-xs font-bold text-slate-600 dark:text-slate-400 bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded-md shadow-sm border border-white/40 dark:border-white/5">{list.length}</span>
                             </div>
                           </div>
-                          <div className="p-3 space-y-2 overflow-y-auto flex-grow custom-scrollbar">
+                          <div className="p-3 space-y-2 overflow-y-auto flex-grow custom-scrollbar transform-gpu" style={{ contentVisibility: 'auto' }}>
                             {list.length === 0 ? (
                                <div className="h-full flex items-center justify-center text-xs font-medium text-slate-500">No links here yet.</div>
                             ) : (
@@ -3449,7 +3492,7 @@ ${msg}`;
                                 const branding = getLinkBranding(l.url);
                                 const BrandIcon = branding.icon;
                                 return (
-                                  <div key={l.id} className={`group flex items-center justify-between p-3 rounded-xl border transition-all hover:-translate-y-0.5 shadow-sm hover:shadow-md ${l.starred ? `${branding.starBorder} ${branding.starBg}` : 'border-white/40 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 hover:bg-white/70 dark:hover:bg-slate-700/60'}`}>
+                                  <div key={l.id} className={`transform-gpu group flex items-center justify-between p-3 rounded-xl border transition-all duration-200 hover:-translate-y-0.5 shadow-sm hover:shadow-md ${l.starred ? `${branding.starBorder} ${branding.starBg}` : 'border-white/40 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 hover:bg-white/70 dark:hover:bg-slate-700/60'}`}>
                                     <div className="flex items-center gap-3 overflow-hidden outline-none flex-grow pr-2">
                                       <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStarLink(l); }} className={`shrink-0 p-1.5 rounded-lg transition-all outline-none ${l.starred ? `${branding.starText} ${branding.starBg} border ${branding.starBorder}` : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 group-hover:text-amber-400/70 hover:bg-white/60 dark:hover:bg-slate-700/60'}`}>
                                         <Star size={16} className={l.starred ? `fill-current ${branding.color}` : ""} />
@@ -4617,8 +4660,8 @@ ${msg}`;
 
       {/* MATERIALS EXPANDABLE MODAL */}
       {isMaterialsModalOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsMaterialsModalOpen(false)}>
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className={`fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 ${isMobileDevice ? 'backdrop-blur-md' : ''} animate-in fade-in duration-200`} onClick={() => setIsMaterialsModalOpen(false)}>
+          <div className={`bg-white/95 dark:bg-slate-950/95 ${isMobileDevice ? 'backdrop-blur-3xl' : ''} p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col relative animate-in zoom-in-95 duration-200`} onClick={e => e.stopPropagation()}>
             <button onClick={() => setIsMaterialsModalOpen(false)} className="absolute top-6 right-6 p-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors outline-none shadow-sm border border-white/40 dark:border-white/10"><X size={20} /></button>
             
             <div className="mb-6 flex items-center gap-3">
@@ -4645,7 +4688,7 @@ ${msg}`;
               />
             </div>
 
-            <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-[300px] mb-4">
+            <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-[300px] mb-4 transform-gpu" style={{ contentVisibility: 'auto' }}>
               {(() => {
                 const filtered = links.filter(l => {
                   if (l.category !== 'materials') return false;
@@ -4668,7 +4711,7 @@ ${msg}`;
                       const branding = getLinkBranding(l.url);
                       const BrandIcon = branding.icon;
                       return (
-                        <div key={l.id} className={`group flex items-center justify-between p-4 rounded-2xl border transition-all hover:-translate-y-0.5 shadow-sm hover:shadow-md ${l.starred ? `${branding.starBorder} ${branding.starBg}` : 'border-white/40 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 hover:bg-white/70 dark:hover:bg-slate-700/60'}`}>
+                        <div key={l.id} className={`transform-gpu group flex items-center justify-between p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 shadow-sm hover:shadow-md ${l.starred ? `${branding.starBorder} ${branding.starBg}` : 'border-white/40 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 hover:bg-white/70 dark:hover:bg-slate-700/60'}`}>
                           <div className="flex items-center gap-3 overflow-hidden outline-none flex-grow pr-2">
                             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStarLink(l); }} className={`shrink-0 p-1.5 rounded-lg transition-all outline-none ${l.starred ? `${branding.starText} ${branding.starBg} border ${branding.starBorder}` : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 group-hover:text-amber-400/70 hover:bg-white/60 dark:hover:bg-slate-700/60'}`}>
                               <Star size={16} className={l.starred ? `fill-current ${branding.color}` : ""} />
@@ -4922,6 +4965,7 @@ ${msg}`;
       )}
 
       {renderLanyardModal()}
+      {renderTransitionOverlay()}
     </div>
   );
 }
