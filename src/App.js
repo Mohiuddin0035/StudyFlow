@@ -2114,9 +2114,9 @@ export default function App() {
     setIsExportOtpFailed(false);
     setIsExportOtpOpen(true);
 
-    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'studyflow_otp';
-    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_sg6qkfe';
-    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'MN-YuJZWzW_02VsVO';
+    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || '';
+    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || '';
+    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || '';
 
     showToast("Sending security code for backup export... 📧", "info");
     try {
@@ -2210,9 +2210,9 @@ export default function App() {
     setIsImportOtpFailed(false);
     setIsImportOtpOpen(true);
 
-    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'studyflow_otp';
-    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_sg6qkfe';
-    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'MN-YuJZWzW_02VsVO';
+    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || '';
+    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || '';
+    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || '';
 
     showToast("Sending security code for data override... 📧", "info");
     try {
