@@ -41,12 +41,12 @@ import SoftAurora from './SoftAurora';
 
 // --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBNPdHfnwBRNeHBlV9WI8oOUKV1TEy4LdE",
-  authDomain: "studyflow-3686a.firebaseapp.com",
-  projectId: "studyflow-3686a",
-  storageBucket: "studyflow-3686a.firebasestorage.app",
-  messagingSenderId: "178478131685",
-  appId: "1:178478131685:web:7621636018e64269a8270c"
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
