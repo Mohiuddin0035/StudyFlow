@@ -5,12 +5,13 @@ import {
   ExternalLink, Clock, MapPin, Sparkles, Loader2, X,
   UserCircle, MoonStar, Zap, Bell, LogOut, Mail, Lock, Sun, Moon,
   Bot, MessageSquare, Search, BrainCircuit, Cpu,
-  ShieldCheck, Vault, Eye, EyeOff, Menu, Heart, UserPlus, Quote, ShieldAlert,
+  ShieldCheck, Vault, Eye, EyeOff, Menu, UserPlus, Quote, ShieldAlert,
   ArrowRight, ArrowLeft,
   ChevronDown, ChevronUp, Maximize2, Star,
   Monitor, CheckSquare, FileText, Send, Inbox, Megaphone, AlertCircle,
   Award, TrendingUp, Play, Pause, RotateCcw, Flame, Copy, CreditCard, Edit2,
-  ClipboardList, Layers, MousePointerClick, Github, Linkedin, Facebook, Youtube, HardDrive
+  ClipboardList, Layers, MousePointerClick, Github, Linkedin, Facebook, Youtube, HardDrive,
+  Upload, Download, Terminal, Database, Check
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import emailjs from '@emailjs/browser';
@@ -51,7 +52,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'uiu-studyflow-v26.2'; 
+const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'uiu-studyflow-v26.7'; 
 
 setPersistence(auth, browserLocalPersistence);
 
@@ -172,24 +173,26 @@ const GlassSelect = ({ value, onChange, options, placeholder }) => {
 };
 
 const CreditSection = () => (
-  <div className="mt-8 p-5 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 shadow-sm group transition-all hover:shadow-md">
-    <style>{`
-      @keyframes heartPulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.15); opacity: 0.8; }
-      }
-      .animate-heart { animation: heartPulse 2s ease-in-out infinite; }
-    `}</style>
-    <div className="flex items-center gap-2 mb-2">
-      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">StudyFlow UIU</span>
-      <span className="bg-orange-100/80 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">v 26.2</span>
+  <div className="p-3.5 rounded-2xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800/80 backdrop-blur-sm transition-all hover:border-orange-500/20">
+    <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-slate-200/40 dark:border-slate-800/60">
+      <div className="flex items-center gap-1.5">
+        <Terminal size={13} className="text-orange-500 shrink-0 animate-pulse" />
+        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">StudyFlow UIU</span>
+      </div>
+      <span className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider">v26.7</span>
     </div>
-    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-      Developed with <span className="inline-flex items-center justify-center animate-heart text-red-500 mx-0.5"><Heart size={12} fill="currentColor" /></span> by <span className="text-slate-800 dark:text-white font-bold">Moheuddin Sikder Saikat</span><br/>(CSE 242)
-    </p>
-    <div className="pt-3 border-t border-slate-200/50 dark:border-slate-700/50">
-      <a href="mailto:msaikat2420035@bscse.uiu.ac.bd" className="flex items-center gap-2 text-xs font-semibold text-orange-500 hover:text-orange-600 hover:underline transition-colors break-all outline-none">
-        <Mail size={14} className="shrink-0" /> Contact for feedback
+    
+    <div className="space-y-1 mb-2.5">
+      <p className="font-mono text-[10px] font-semibold text-slate-500 dark:text-slate-400">Built, Designed & Developed by</p>
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-orange-500 transition-colors">Moheuddin Sikder Saikat</span>
+        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-200/50 dark:bg-slate-800 px-1.5 py-0.5 rounded-md shrink-0">CSE 242</span>
+      </div>
+    </div>
+
+    <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/60">
+      <a href="mailto:msaikat2420035@bscse.uiu.ac.bd" className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-500 hover:text-orange-600 dark:hover:text-orange-400 transition-colors outline-none">
+        <Mail size={12} className="shrink-0" /> Contact for feedback
       </a>
     </div>
   </div>
@@ -207,6 +210,27 @@ const LiveClock = () => {
     </span>
   );
 };
+
+const RamadanLanternIcon = ({ size = 18, className = "" }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M12 2v2" />
+    <path d="M8 7h8l-1-3h-6z" fill="currentColor" fillOpacity="0.2" />
+    <path d="M7 7l-2 5 3 7h8l3-7-2-5" />
+    <path d="M12 10v5" strokeWidth="1.5" />
+    <path d="M10 12.5h4" strokeWidth="1.5" />
+    <path d="M9 19h6v2H9z" fill="currentColor" fillOpacity="0.2" />
+  </svg>
+);
 
 
 
@@ -607,6 +631,23 @@ export default function App() {
   const [isIosSafari, setIsIosSafari] = useState(false);
   const [dismissedInstallBanner, setDismissedInstallBanner] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // --- IMPORT & EXPORT STATES ---
+  const fileInputRef = useRef(null);
+  const [isExportConfirmOpen, setIsExportConfirmOpen] = useState(false);
+  const [isExportOtpOpen, setIsExportOtpOpen] = useState(false);
+  const [exportOtpInput, setExportOtpInput] = useState('');
+  const [exportOtpGenerated, setExportOtpGenerated] = useState('');
+  const [isExportOtpFailed, setIsExportOtpFailed] = useState(false);
+  const [isExportSuccessOpen, setIsExportSuccessOpen] = useState(false);
+
+  const [isImportConflictOpen, setIsImportConflictOpen] = useState(false);
+  const [importedPendingData, setImportedPendingData] = useState(null);
+  const [isImportOtpOpen, setIsImportOtpOpen] = useState(false);
+  const [importOtpInput, setImportOtpInput] = useState('');
+  const [importOtpGenerated, setImportOtpGenerated] = useState('');
+  const [isImportOtpFailed, setIsImportOtpFailed] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -948,39 +989,85 @@ export default function App() {
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
-    const results = [];
+    const routineResults = [];
+    const otherResults = [];
     
     routine.forEach(r => {
-      if (r.course.toLowerCase().includes(query) || r.code.toLowerCase().includes(query) || (r.faculty && r.faculty.toLowerCase().includes(query))) {
-        results.push({ type: 'Routine', title: `${r.course} (${r.code})`, sub: `Class on ${r.day} at ${r.time} • Room ${r.room}`, action: () => { setActiveTab('routine'); setSearchOpen(false); } });
+      if (
+        (r.course && r.course.toLowerCase().includes(query)) ||
+        (r.code && r.code.toLowerCase().includes(query)) ||
+        (r.faculty && r.faculty.toLowerCase().includes(query)) ||
+        (r.room && r.room.toLowerCase().includes(query)) ||
+        (r.day && r.day.toLowerCase().includes(query)) ||
+        (r.time && r.time.toLowerCase().includes(query))
+      ) {
+        routineResults.push({
+          type: 'Routine',
+          title: `${r.course} (${r.code})`,
+          sub: `Class on ${r.day} at ${r.time} • Room ${r.room}${r.faculty ? ` • ${r.faculty}` : ''}`,
+          action: () => { setActiveTab('routine'); setSearchOpen(false); }
+        });
       }
     });
     
     studyPlans.forEach(p => {
-      if (p.topic.toLowerCase().includes(query)) {
-        results.push({ type: 'Study Plan', title: p.topic, sub: `Scheduled for ${p.date} • ${p.priority} priority ${p.completed ? '(Completed)' : '(Pending)'}`, action: () => { setActiveTab('planner'); setSearchOpen(false); } });
+      if (
+        (p.topic && p.topic.toLowerCase().includes(query)) ||
+        (p.date && p.date.toLowerCase().includes(query))
+      ) {
+        otherResults.push({
+          type: 'Study Plan',
+          title: p.topic,
+          sub: `Scheduled for ${p.date} • ${p.priority} priority ${p.completed ? '(Completed)' : '(Pending)'}`,
+          action: () => { setActiveTab('planner'); setSearchOpen(false); }
+        });
       }
     });
     
     links.forEach(l => {
-      if (l.title.toLowerCase().includes(query) || l.url.toLowerCase().includes(query)) {
-        results.push({ type: 'Link Vault', title: l.title, sub: `${l.category} • ${l.url}`, action: () => { window.open(l.url, '_blank'); setSearchOpen(false); } });
+      if (
+        (l.title && l.title.toLowerCase().includes(query)) ||
+        (l.url && l.url.toLowerCase().includes(query)) ||
+        (l.category && l.category.toLowerCase().includes(query))
+      ) {
+        otherResults.push({
+          type: 'Link Vault',
+          title: l.title,
+          sub: `${l.category} • ${l.url}`,
+          action: () => { window.open(l.url, '_blank'); setSearchOpen(false); }
+        });
       }
     });
     
     cts.forEach(c => {
-      if (c.course.toLowerCase().includes(query) || c.topic.toLowerCase().includes(query)) {
-        results.push({ type: 'Class Test (CT)', title: `${c.course} CT`, sub: `${c.topic} • Deadline: ${c.deadline}`, action: () => { setActiveTab('assessments'); setSearchOpen(false); } });
+      if (
+        (c.course && c.course.toLowerCase().includes(query)) ||
+        (c.topic && c.topic.toLowerCase().includes(query))
+      ) {
+        otherResults.push({
+          type: 'Class Test (CT)',
+          title: `${c.course} CT`,
+          sub: `${c.topic} • Deadline: ${c.deadline}`,
+          action: () => { setActiveTab('assessments'); setSearchOpen(false); }
+        });
       }
     });
     
     assignments.forEach(a => {
-      if (a.course.toLowerCase().includes(query) || a.topic.toLowerCase().includes(query)) {
-        results.push({ type: 'Assignment', title: `${a.course} Assignment`, sub: `${a.topic} • Deadline: ${a.deadline}`, action: () => { setActiveTab('assessments'); setSearchOpen(false); } });
+      if (
+        (a.course && a.course.toLowerCase().includes(query)) ||
+        (a.topic && a.topic.toLowerCase().includes(query))
+      ) {
+        otherResults.push({
+          type: 'Assignment',
+          title: `${a.course} Assignment`,
+          sub: `${a.topic} • Deadline: ${a.deadline}`,
+          action: () => { setActiveTab('assessments'); setSearchOpen(false); }
+        });
       }
     });
     
-    return results;
+    return [...routineResults, ...otherResults];
   }, [searchQuery, routine, studyPlans, links, cts, assignments]);
 
   // --- DARK MODE LOGIC ---
@@ -2017,6 +2104,182 @@ export default function App() {
     }
   };
 
+  // --- IMPORT & EXPORT HANDLERS ---
+  const handleExportDataProceed = async () => {
+    setIsExportConfirmOpen(false);
+    if (!user) return;
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setExportOtpGenerated(code);
+    setExportOtpInput('');
+    setIsExportOtpFailed(false);
+    setIsExportOtpOpen(true);
+
+    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'studyflow_otp';
+    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_sg6qkfe';
+    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'MN-YuJZWzW_02VsVO';
+
+    showToast("Sending security code for backup export... 📧", "info");
+    try {
+      await emailjs.send(
+        serviceId,
+        templateId,
+        {
+          to_email: user.email,
+          to_name: user.displayName || 'StudyFlow User',
+          otp: code,
+        },
+        publicKey
+      );
+      showToast(`Verification code sent to ${user.email}! 📧`, "success");
+    } catch (err) {
+      console.error("EmailJS Error:", err);
+      setIsExportOtpFailed(true);
+      showToast("Email service quota exceeded. Emergency backup code provided.", "warning");
+    }
+  };
+
+  const handleVerifyExportOtp = () => {
+    if (exportOtpInput.trim() !== exportOtpGenerated) {
+      showToast("Incorrect security code! Please check again.", "error");
+      return;
+    }
+    setIsExportOtpOpen(false);
+    
+    // Construct full backup payload
+    const backupData = {
+      studyflow_backup: true,
+      version: "26.7",
+      exportDate: new Date().toISOString(),
+      userEmail: user?.email,
+      displayName: user?.displayName,
+      routine,
+      studyPlans,
+      links,
+      cts,
+      assignments,
+      profiles,
+      notes: vaultLinks || [],
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `StudyFlow_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setIsExportSuccessOpen(true);
+    showToast("Data backup file generated! 📦", "success");
+  };
+
+  const handleImportFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (!parsed || typeof parsed !== 'object') {
+          showToast("Invalid JSON backup format.", "error");
+          return;
+        }
+        setImportedPendingData(parsed);
+        const hasData = (routine && routine.length > 0) || (studyPlans && studyPlans.length > 0) || (links && links.length > 0) || (cts && cts.length > 0) || (assignments && assignments.length > 0);
+        if (hasData) {
+          setIsImportConflictOpen(true);
+        } else {
+          executeDataImport(parsed, 'merge');
+        }
+      } catch (err) {
+        showToast("Failed to parse backup JSON file.", "error");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleImportOverrideClick = async () => {
+    setIsImportConflictOpen(false);
+    if (!user) return;
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setImportOtpGenerated(code);
+    setImportOtpInput('');
+    setIsImportOtpFailed(false);
+    setIsImportOtpOpen(true);
+
+    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'studyflow_otp';
+    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_sg6qkfe';
+    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'MN-YuJZWzW_02VsVO';
+
+    showToast("Sending security code for data override... 📧", "info");
+    try {
+      await emailjs.send(
+        serviceId,
+        templateId,
+        {
+          to_email: user.email,
+          to_name: user.displayName || 'StudyFlow User',
+          otp: code,
+        },
+        publicKey
+      );
+      showToast(`Verification code sent to ${user.email}! 📧`, "success");
+    } catch (err) {
+      console.error("EmailJS Error:", err);
+      setIsImportOtpFailed(true);
+      showToast("Email service quota exceeded. Emergency backup code provided.", "warning");
+    }
+  };
+
+  const handleVerifyImportOtp = () => {
+    if (importOtpInput.trim() !== importOtpGenerated) {
+      showToast("Incorrect security code! Override cancelled.", "error");
+      return;
+    }
+    setIsImportOtpOpen(false);
+    if (importedPendingData) {
+      executeDataImport(importedPendingData, 'override');
+    }
+  };
+
+  const executeDataImport = async (data, mode) => {
+    if (!user || !data) return;
+    try {
+      showToast("Importing data to workspace... ⏳", "info");
+
+      const newRoutine = mode === 'override' ? (data.routine || []) : [...routine, ...(data.routine || [])];
+      const newPlans = mode === 'override' ? (data.studyPlans || []) : [...studyPlans, ...(data.studyPlans || [])];
+      const newLinks = mode === 'override' ? (data.links || []) : [...links, ...(data.links || [])];
+      const newCts = mode === 'override' ? (data.cts || []) : [...cts, ...(data.cts || [])];
+      const newAssignments = mode === 'override' ? (data.assignments || []) : [...assignments, ...(data.assignments || [])];
+
+      setRoutine(newRoutine);
+      setStudyPlans(newPlans);
+      setLinks(newLinks);
+      setCts(newCts);
+      setAssignments(newAssignments);
+
+      const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid);
+      await setDoc(userDocRef, {
+        routine: newRoutine,
+        studyPlans: newPlans,
+        links: newLinks,
+        cts: newCts,
+        assignments: newAssignments,
+        lastImportedAt: new Date().toISOString()
+      }, { merge: true });
+
+      showToast(`Workspace data successfully ${mode === 'override' ? 'overwritten' : 'merged'}! 🎉`, "success");
+      setImportedPendingData(null);
+    } catch (err) {
+      console.error("Import execution error:", err);
+      showToast("Failed to save imported data.", "error");
+    }
+  };
+
   // --- SECURE VAULT ACCESS HANDLERS ---
   const handleSetupPasscode = async (e) => {
     e.preventDefault();
@@ -2150,15 +2413,224 @@ ${msg}`;
   const NavItem = ({ id, icon: Icon, label, onClick }) => (
     <button 
       onClick={() => { setActiveTab(id); if (onClick) onClick(); }} 
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative w-full ${activeTab === id ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 translate-x-1 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-white/40 dark:hover:bg-slate-800/40 font-medium'} outline-none`}
+      title={sidebarCollapsed ? label : undefined}
+      className={`flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'gap-3 px-4 py-3'} rounded-xl transition-all duration-200 relative w-full ${activeTab === id ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-white/40 dark:hover:bg-slate-800/40 font-medium'} outline-none cursor-pointer`}
     >
-      <Icon size={18} /> 
-      <span className="text-sm capitalize">{label}</span>
-      {id === 'inbox' && unreadAnnouncementsCount > 0 && (
-        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadAnnouncementsCount}</span>
-      )}
+      <Icon size={18} className="shrink-0" /> 
+      {!sidebarCollapsed && <span className="text-sm capitalize truncate">{label}</span>}
     </button>
   );
+
+  const renderBackupModals = () => {
+    return (
+      <>
+        {/* Hidden File Picker Input */}
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleImportFileSelect} 
+          accept=".json" 
+          className="hidden" 
+        />
+
+        {/* EXPORT CONFIRMATION MODAL */}
+        {isExportConfirmOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsExportConfirmOpen(false)}>
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full text-center relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setIsExportConfirmOpen(false)} className="absolute top-5 right-5 p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors outline-none cursor-pointer"><X size={18} /></button>
+              
+              <div className="mx-auto w-16 h-16 bg-gradient-to-tr from-amber-500 to-orange-500 text-white rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-orange-500/25 animate-[bounce_2s_infinite]">
+                <Flame size={32} />
+              </div>
+              
+              <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-2">Secure Backup Export</h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                Your data is already secured at our Firebase database. Do you still want to download a local backup file to your device?
+              </p>
+
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setIsExportConfirmOpen(false)} 
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-red-500/20 active:scale-95 transition-all outline-none cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleExportDataProceed} 
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all outline-none cursor-pointer"
+                >
+                  Proceed
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* EXPORT OTP VERIFICATION MODAL */}
+        {isExportOtpOpen && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsExportOtpOpen(false)}>
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full text-center relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setIsExportOtpOpen(false)} className="absolute top-5 right-5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors outline-none cursor-pointer"><X size={18} /></button>
+
+              <div className="mx-auto w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                <ShieldCheck size={28} />
+              </div>
+
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-white mb-1">Verify Email OTP</h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                We sent a 6-digit verification security code to <span className="text-orange-500 font-bold">{user?.email}</span> to authorize downloading your data.
+              </p>
+
+              {isExportOtpFailed && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl text-left">
+                  <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 leading-tight">
+                    Notice: Email service quota reached limit. Use emergency code below:
+                  </p>
+                  <p className="text-center font-mono font-black text-lg text-amber-600 dark:text-amber-300 mt-1 select-all tracking-wider">
+                    {exportOtpGenerated}
+                  </p>
+                </div>
+              )}
+
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="Enter 6-digit OTP"
+                value={exportOtpInput}
+                onChange={e => setExportOtpInput(e.target.value)}
+                className="w-full text-center font-mono text-xl tracking-widest px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500 text-slate-800 dark:text-white mb-6 font-bold"
+              />
+
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setIsExportOtpOpen(false)} 
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-xs transition-all outline-none cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleVerifyExportOtp} 
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all outline-none cursor-pointer"
+                >
+                  Verify & Download
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* EXPORT SUCCESS MODAL */}
+        {isExportSuccessOpen && (
+          <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsExportSuccessOpen(false)}>
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full text-center relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                <Check size={32} />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-800 dark:text-white mb-2">Download Completed</h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                Your StudyFlow workspace data backup file has been saved to your local drive. Please store it securely.
+              </p>
+              <button 
+                onClick={() => setIsExportSuccessOpen(false)} 
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all outline-none cursor-pointer"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* IMPORT CONFLICT / MODE MODAL */}
+        {isImportConflictOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsImportConflictOpen(false)}>
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full text-center relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setIsImportConflictOpen(false)} className="absolute top-5 right-5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors outline-none cursor-pointer"><X size={18} /></button>
+
+              <div className="mx-auto w-14 h-14 bg-orange-500/10 border border-orange-500/30 text-orange-500 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                <Database size={28} />
+              </div>
+
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-white mb-2">Import Data Options</h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                Your workspace already contains existing data. How would you like to apply the imported backup file?
+              </p>
+
+              <div className="space-y-3">
+                <button 
+                  onClick={() => { setIsImportConflictOpen(false); executeDataImport(importedPendingData, 'merge'); }} 
+                  className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 p-3.5 rounded-xl font-bold text-xs transition-all outline-none flex flex-col items-center gap-1 cursor-pointer"
+                >
+                  <span className="text-sm font-extrabold">Merge Data</span>
+                  <span className="text-[10px] font-normal text-slate-500">Combines imported items with your existing data.</span>
+                </button>
+
+                <button 
+                  onClick={handleImportOverrideClick} 
+                  className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 p-3.5 rounded-xl font-bold text-xs transition-all outline-none flex flex-col items-center gap-1 cursor-pointer"
+                >
+                  <span className="text-sm font-extrabold">Override All Data (Requires OTP)</span>
+                  <span className="text-[10px] font-normal text-slate-500">Replaces current workspace state with backup file data.</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* IMPORT OVERRIDE OTP MODAL */}
+        {isImportOtpOpen && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsImportOtpOpen(false)}>
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full text-center relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setIsImportOtpOpen(false)} className="absolute top-5 right-5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors outline-none cursor-pointer"><X size={18} /></button>
+
+              <div className="mx-auto w-14 h-14 bg-red-500/10 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                <ShieldAlert size={28} />
+              </div>
+
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-white mb-1">Confirm Data Override</h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                Enter the 6-digit security code sent to <span className="text-orange-500 font-bold">{user?.email}</span> to authorize overwriting all workspace data.
+              </p>
+
+              {isImportOtpFailed && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl text-left">
+                  <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 leading-tight">
+                    Notice: Email service quota reached limit. Use emergency code below:
+                  </p>
+                  <p className="text-center font-mono font-black text-lg text-amber-600 dark:text-amber-300 mt-1 select-all tracking-wider">
+                    {importOtpGenerated}
+                  </p>
+                </div>
+              )}
+
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="Enter 6-digit Security Code"
+                value={importOtpInput}
+                onChange={e => setImportOtpInput(e.target.value)}
+                className="w-full text-center font-mono text-xl tracking-widest px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-red-500 text-slate-800 dark:text-white mb-6 font-bold"
+              />
+
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setIsImportOtpOpen(false)} 
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-xs transition-all outline-none cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleVerifyImportOtp} 
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-red-500/20 active:scale-95 transition-all outline-none cursor-pointer"
+                >
+                  Confirm Override
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   const renderTransitionOverlay = () => {
     return (
@@ -2300,7 +2772,7 @@ ${msg}`;
               <div className="lg:col-span-7 text-left flex flex-col items-start justify-center animate-in fade-in slide-in-from-left-6 duration-700">
                 {/* Sleek platform badge */}
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-orange-500/20 bg-orange-500/5 text-orange-500 text-[9px] uppercase tracking-widest font-bold mb-4 select-none shadow-[0_4px_12px_rgba(249,115,22,0.05)]">
-                  <Sparkles size={9} className="animate-pulse" /> StudyFlow v26.2
+                  <Sparkles size={9} className="animate-pulse" /> StudyFlow v26.7
                 </div>
 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl mb-5 leading-[1.02] text-slate-900 dark:text-white select-none">
@@ -2431,6 +2903,7 @@ ${msg}`;
             </div>
           </footer>
           {renderLanyardModal()}
+          {renderBackupModals()}
           {renderTransitionOverlay()}
         </div>
       );
@@ -2543,8 +3016,8 @@ ${msg}`;
               {authMode === 'login' && <button onClick={handleForgotPassword} className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors outline-none cursor-pointer">Forgot password?</button>}
             </div>
           </div>
-
         </div>
+        {renderBackupModals()}
         {renderTransitionOverlay()}
       </div>
     );
@@ -2565,13 +3038,13 @@ ${msg}`;
       
       {/* SIDEBAR */}
       {!isMobileDevice && (
-        <aside className={`fixed inset-y-0 left-0 z-[100] lg:relative lg:translate-x-0 w-72 lg:w-64 bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-white/50 dark:border-white/10 flex flex-col p-6 transition-transform duration-300 overflow-y-auto custom-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${mobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
-          <div className="flex items-center justify-between mb-8 px-2 relative z-10">
+        <aside className={`fixed inset-y-0 left-0 z-[100] lg:relative lg:translate-x-0 ${sidebarCollapsed ? 'w-20 px-3 py-6' : 'w-72 lg:w-64 p-6'} bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-white/50 dark:border-white/10 flex flex-col transition-all duration-300 overflow-y-auto custom-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${mobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-8 px-2 relative z-10`}>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-orange-500/90 backdrop-blur-md rounded-lg flex items-center justify-center text-white shadow-lg border border-white/20"><School size={18} /></div>
-              <h1 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white">StudyFlow</h1>
+              <div className="w-8 h-8 bg-orange-500/90 backdrop-blur-md rounded-lg flex items-center justify-center text-white shadow-lg border border-white/20 shrink-0"><School size={18} /></div>
+              {!sidebarCollapsed && <h1 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white">StudyFlow</h1>}
             </div>
-            <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-slate-500 hover:text-orange-500 outline-none"><X size={20} /></button>
+            {!sidebarCollapsed && <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-slate-500 hover:text-orange-500 outline-none"><X size={20} /></button>}
           </div>
           
           <nav className="flex flex-col gap-1.5 flex-grow mb-6 relative z-10">
@@ -2583,22 +3056,64 @@ ${msg}`;
             <NavItem id="cgpa" icon={Award} label="CGPA & Payment" onClick={() => setMobileSidebarOpen(false)} />
           </nav>
 
-          <div className="relative z-10"><CreditSection /></div>
+          {!sidebarCollapsed && <div className="relative z-10"><CreditSection /></div>}
           
           <div className="mt-auto pt-6 border-t border-slate-200/50 dark:border-slate-700/50 relative z-10 space-y-2">
-             <button onClick={() => setRamadanMode(!ramadanMode)} className="w-full flex items-center justify-between group outline-none p-2 hover:bg-white/40 dark:hover:bg-slate-800/40 rounded-xl transition-colors">
-                <div className="flex items-center gap-3 text-sm font-semibold text-slate-600 dark:text-slate-300"><MoonStar size={18} className="text-indigo-400" /> Ramadan Mode</div>
-                <div className={`w-9 h-5 rounded-full p-0.5 transition-colors shadow-inner ${ramadanMode ? 'bg-indigo-500/90 backdrop-blur-sm' : 'bg-slate-300/50 dark:bg-slate-700/50'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${ramadanMode ? 'translate-x-4' : 'translate-x-0'}`} /></div>
-             </button>
+             {sidebarCollapsed ? (
+               <button 
+                 onClick={() => setRamadanMode(!ramadanMode)} 
+                 title={`Ramadan Mode: ${ramadanMode ? 'On' : 'Off'}`}
+                 className={`w-full flex items-center justify-center p-3 rounded-xl transition-all outline-none cursor-pointer ${ramadanMode ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' : 'text-slate-500 hover:bg-white/40 dark:hover:bg-slate-800/40'}`}
+               >
+                 <RamadanLanternIcon size={18} className={ramadanMode ? 'text-indigo-400 animate-pulse' : 'text-slate-400'} />
+               </button>
+             ) : (
+               <button onClick={() => setRamadanMode(!ramadanMode)} className="w-full flex items-center justify-between group outline-none p-2 hover:bg-white/40 dark:hover:bg-slate-800/40 rounded-xl transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 text-sm font-semibold text-slate-600 dark:text-slate-300"><RamadanLanternIcon size={18} className="text-indigo-400" /> Ramadan Mode</div>
+                  <div className={`w-9 h-5 rounded-full p-0.5 transition-colors shadow-inner ${ramadanMode ? 'bg-indigo-500/90 backdrop-blur-sm' : 'bg-slate-300/50 dark:bg-slate-700/50'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${ramadanMode ? 'translate-x-4' : 'translate-x-0'}`} /></div>
+               </button>
+             )}
              
-             <NavItem id="inbox" icon={Inbox} label="Inbox" onClick={() => setMobileSidebarOpen(false)} />
+             {sidebarCollapsed ? (
+               <div className="flex flex-col items-center gap-2 w-full pt-1">
+                 <button 
+                   onClick={() => { setMobileSidebarOpen(false); fileInputRef.current?.click(); }} 
+                   title="Import Backup Data"
+                   className="w-full flex items-center justify-center p-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20 transition-all active:scale-95 outline-none cursor-pointer"
+                 >
+                   <Upload size={16} />
+                 </button>
+                 <button 
+                   onClick={() => { setMobileSidebarOpen(false); setIsExportConfirmOpen(true); }} 
+                   title="Export Backup Data"
+                   className="w-full flex items-center justify-center p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 transition-all active:scale-95 outline-none cursor-pointer"
+                 >
+                   <Download size={16} />
+                 </button>
+               </div>
+             ) : (
+               <div className="flex items-center gap-2 w-full pt-1">
+                 <button 
+                   onClick={() => { setMobileSidebarOpen(false); fileInputRef.current?.click(); }} 
+                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-xs font-bold transition-all active:scale-95 outline-none cursor-pointer"
+                 >
+                   <Upload size={14} /> Import
+                 </button>
+                 <button 
+                   onClick={() => { setMobileSidebarOpen(false); setIsExportConfirmOpen(true); }} 
+                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold transition-all active:scale-95 outline-none cursor-pointer"
+                 >
+                   <Download size={14} /> Export
+                 </button>
+               </div>
+             )}
              
-             <div className="pt-4 mt-2 flex items-center justify-between px-2">
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-md flex items-center justify-center text-slate-500 border border-white/40 dark:border-white/10 shadow-sm"><UserCircle size={16} /></div>
-                  <div className="overflow-hidden"><p className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[120px]">{user?.displayName}</p></div>
+             <div className={`pt-4 mt-2 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} px-2`}>
+                <div className="flex items-center gap-2 overflow-hidden" title={sidebarCollapsed ? user?.displayName : undefined}>
+                  <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-md flex items-center justify-center text-slate-500 border border-white/40 dark:border-white/10 shadow-sm shrink-0"><UserCircle size={16} /></div>
+                  {!sidebarCollapsed && <div className="overflow-hidden"><p className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[120px]">{user?.displayName}</p></div>}
                 </div>
-                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors outline-none"><LogOut size={16} /></button>
+                {!sidebarCollapsed && <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors outline-none cursor-pointer"><LogOut size={16} /></button>}
              </div>
           </div>
         </aside>
@@ -2607,13 +3122,21 @@ ${msg}`;
       {!isMobileDevice && mobileSidebarOpen && <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[99] lg:hidden" onClick={() => setMobileSidebarOpen(false)} />}
 
       <main className="flex-grow overflow-y-auto relative bg-transparent custom-scrollbar z-10 transform-gpu" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <header className="sticky top-0 z-50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl px-6 lg:px-8 py-4 flex justify-between items-center border-b border-white/50 dark:border-white/10 shadow-sm transform-gpu">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl px-4 lg:px-6 py-4 flex justify-between items-center border-b border-white/50 dark:border-white/10 shadow-sm transform-gpu">
+          <div className="flex items-center gap-2 sm:gap-3">
              {!isMobileDevice && (
-               <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-orange-500 transition-colors outline-none"><Menu size={22} /></button>
+               <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-orange-500 transition-colors outline-none cursor-pointer"><Menu size={22} /></button>
              )}
-             <div className="flex items-center gap-2">
-               <h2 className="text-lg font-bold text-slate-800 dark:text-white capitalize">
+             {!isMobileDevice && (
+               <button 
+                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                 className="hidden lg:flex items-center justify-center p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-orange-500 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all outline-none cursor-pointer border border-slate-200/50 dark:border-slate-800/80 shadow-2xs -ml-1 mr-1.5"
+                 title={sidebarCollapsed ? "Expand Sidebar" : "Minimize Sidebar"}
+               >
+                 <Menu size={18} className={`transition-transform duration-300 ${sidebarCollapsed ? 'rotate-90 text-orange-500' : ''}`} />
+               </button>
+             )}
+             <h2 className="text-lg font-bold text-slate-800 dark:text-white capitalize">
                  {activeTab === 'assessments' ? 'CT & Assignments' : activeTab === 'cgpa' ? 'CGPA & Payment' : activeTab === 'links' ? 'Link Vault' : activeTab}
                </h2>
                {!isMobileDevice && activeTab === 'dashboard' && (
@@ -2623,7 +3146,6 @@ ${msg}`;
                  </span>
                )}
              </div>
-          </div>
           
           <div className="flex items-center gap-3 lg:gap-4">
             <button onClick={() => setSearchOpen(true)} className="flex items-center gap-2 px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-white/60 dark:border-white/10 shadow-sm text-xs font-bold text-slate-500 hover:text-orange-500 hover:border-orange-500/30 transition-all outline-none">
@@ -2674,7 +3196,9 @@ ${msg}`;
                       )}
                     </div>
                     <div className="p-2 border-t border-slate-200 dark:border-slate-800">
-                      <button onClick={() => { setActiveTab('inbox'); setIsNotificationsOpen(false); }} className="w-full text-center text-xs font-bold text-orange-500 hover:text-orange-600 p-1.5">View All in Inbox</button>
+                      <button onClick={() => { setActiveTab('inbox'); setIsNotificationsOpen(false); }} className="w-full text-center text-xs font-bold text-orange-500 hover:text-orange-600 p-1.5 flex items-center justify-center gap-2 outline-none cursor-pointer">
+                        <Inbox size={14} /> View All in Inbox
+                      </button>
                     </div>
                   </div>
               )}
@@ -2800,14 +3324,22 @@ ${msg}`;
                       </button>
                     )}
 
-                    {/* Inbox for mobile users */}
+                    {/* Import & Export buttons for mobile users */}
                     {isMobileDevice && (
-                      <button onClick={() => { setActiveTab('inbox'); setIsProfileModalOpen(false); }} className="w-full flex items-center gap-3 p-2.5 mb-1 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition-all font-semibold text-sm outline-none">
-                        <Inbox size={16} className="text-slate-500" /> Inbox
-                        {unreadAnnouncementsCount > 0 && (
-                          <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadAnnouncementsCount}</span>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2 w-full p-1 mb-1">
+                        <button 
+                          onClick={() => { setIsProfileModalOpen(false); fileInputRef.current?.click(); }} 
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-xs font-bold transition-all active:scale-95 outline-none cursor-pointer"
+                        >
+                          <Upload size={14} /> Import
+                        </button>
+                        <button 
+                          onClick={() => { setIsProfileModalOpen(false); setIsExportConfirmOpen(true); }} 
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold transition-all active:scale-95 outline-none cursor-pointer"
+                        >
+                          <Download size={14} /> Export
+                        </button>
+                      </div>
                     )}
 
                     <button onClick={() => { setIsVaultOpen(true); setIsProfileModalOpen(false); }} className="w-full flex items-center gap-3 p-2.5 mb-1 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition-all font-semibold text-sm outline-none"><Vault size={16} className="text-indigo-500" /> Hidden Vault</button>
@@ -4965,6 +5497,7 @@ ${msg}`;
       )}
 
       {renderLanyardModal()}
+      {renderBackupModals()}
       {renderTransitionOverlay()}
     </div>
   );
