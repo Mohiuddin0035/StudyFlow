@@ -23,7 +23,7 @@ import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile,
   signOut, setPersistence, browserLocalPersistence,
-  GoogleAuthProvider, signInWithPopup
+  GoogleAuthProvider, signInWithPopup, fetchSignInMethodsForEmail
 } from 'firebase/auth';
 import SplitText from './SplitText';
 import RotatingText from './RotatingText';
@@ -41,12 +41,12 @@ import SoftAurora from './SoftAurora';
 
 // --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBNPdHfnwBRNeHBlV9WI8oOUKV1TEy4LdE",
-  authDomain: "studyflow-3686a.firebaseapp.com",
-  projectId: "studyflow-3686a",
-  storageBucket: "studyflow-3686a.firebasestorage.app",
-  messagingSenderId: "178478131685",
-  appId: "1:178478131685:web:7621636018e64269a8270c"
+  apiKey: "YOUR_FIREBASE_API_KEY",
+  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+  projectId: "YOUR_FIREBASE_PROJECT_ID",
+  storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
+  appId: "YOUR_FIREBASE_APP_ID"
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
@@ -57,7 +57,21 @@ const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_
 setPersistence(auth, browserLocalPersistence);
 
 // --- CONSTANTS ---
-const ADMIN_EMAIL = "msaikat2420035@bscse.uiu.ac.bd";
+const ADMIN_EMAIL = "YOUR_ADMIN_EMAIL@example.com";
+const EMAILJS_SERVICE_ID = String(process.env.REACT_APP_EMAILJS_SERVICE_ID || 'YOUR_EMAILJS_SERVICE_ID').replace(/["']/g, '').trim();
+const EMAILJS_TEMPLATE_ID = String(process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'YOUR_EMAILJS_TEMPLATE_ID').replace(/["']/g, '').trim();
+const EMAILJS_PUBLIC_KEY = String(process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'YOUR_EMAILJS_PUBLIC_KEY').replace(/["']/g, '').trim();
+const EMAILJS_PRIVATE_KEY = String(process.env.REACT_APP_EMAILJS_PRIVATE_KEY || 'YOUR_EMAILJS_PRIVATE_KEY').replace(/["']/g, '').trim();
+const DELETE_SERVICE_ID = String(process.env.REACT_APP_DELETE_SERVICE_ID || 'YOUR_DELETE_SERVICE_ID').replace(/["']/g, '').trim();
+const DELETE_TEMPLATE_ID = String(process.env.REACT_APP_DELETE_TEMPLATE_ID || 'YOUR_DELETE_TEMPLATE_ID').replace(/["']/g, '').trim();
+const DELETE_PUBLIC_KEY = String(process.env.REACT_APP_DELETE_PUBLIC_KEY || 'YOUR_DELETE_PUBLIC_KEY').replace(/["']/g, '').trim();
+const DELETE_PRIVATE_KEY = String(process.env.REACT_APP_DELETE_PRIVATE_KEY || 'YOUR_DELETE_PRIVATE_KEY').replace(/["']/g, '').trim();
+
+try {
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY, privateKey: EMAILJS_PRIVATE_KEY });
+} catch (e) {
+  console.error("EmailJS Init Error:", e);
+}
 
 const CATEGORIES = {
   OFFICIAL: { id: 'official', label: 'Official UIU', icon: School, color: 'text-orange-500', bg: 'bg-orange-50/50 dark:bg-orange-500/10' },
@@ -191,7 +205,7 @@ const CreditSection = () => (
     </div>
 
     <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/60">
-      <a href="mailto:msaikat2420035@bscse.uiu.ac.bd" className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-500 hover:text-orange-600 dark:hover:text-orange-400 transition-colors outline-none">
+      <a href={`mailto:${ADMIN_EMAIL}`} className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-500 hover:text-orange-600 dark:hover:text-orange-400 transition-colors outline-none">
         <Mail size={12} className="shrink-0" /> Contact for feedback
       </a>
     </div>
@@ -492,6 +506,7 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // --- UI STATE ---
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -640,6 +655,7 @@ export default function App() {
   const [exportOtpInput, setExportOtpInput] = useState('');
   const [exportOtpGenerated, setExportOtpGenerated] = useState('');
   const [isExportOtpFailed, setIsExportOtpFailed] = useState(false);
+  const [exportOtpErrorMsg, setExportOtpErrorMsg] = useState('');
   const [isExportSuccessOpen, setIsExportSuccessOpen] = useState(false);
 
   const [isImportConflictOpen, setIsImportConflictOpen] = useState(false);
@@ -648,6 +664,22 @@ export default function App() {
   const [importOtpInput, setImportOtpInput] = useState('');
   const [importOtpGenerated, setImportOtpGenerated] = useState('');
   const [isImportOtpFailed, setIsImportOtpFailed] = useState(false);
+  const [deleteOtpErrorMsg, setDeleteOtpErrorMsg] = useState('');
+
+  // --- SIGNUP OTP STATES ---
+  const [isSignupOtpModalOpen, setIsSignupOtpModalOpen] = useState(false);
+  const [signupOtpInput, setSignupOtpInput] = useState('');
+  const [signupOtpGenerated, setSignupOtpGenerated] = useState('');
+  const [isSignupOtpFailed, setIsSignupOtpFailed] = useState(false);
+  const [signupOtpErrorMsg, setSignupOtpErrorMsg] = useState('');
+  const [pendingSignupData, setPendingSignupData] = useState(null);
+
+  // --- ACCOUNT DELETION REQUEST STATES ---
+  const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
+  const [deleteAccountReason, setDeleteAccountReason] = useState('');
+  const [deleteAccountConfirmed, setDeleteAccountConfirmed] = useState(false);
+  const [isDeleteAccountLoading, setIsDeleteAccountLoading] = useState(false);
+  const [isDeleteAccountSuccessOpen, setIsDeleteAccountSuccessOpen] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -1172,18 +1204,83 @@ export default function App() {
       if (authMode === 'signup') {
         const { username, email, password } = authData;
         if (!username || !email || !password) throw new Error("Please fill in all fields.");
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCred.user, { displayName: username });
+        
+        // Check if email is already registered in Firebase
+        const methods = await fetchSignInMethodsForEmail(auth, email.trim());
+        if (methods && methods.length > 0) {
+          throw new Error("This email is already registered. Please sign in instead.");
+        }
+        
+        // Trigger Email Verification OTP before creating Firebase account
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        setSignupOtpGenerated(code);
+        setSignupOtpInput('');
+        setIsSignupOtpFailed(false);
+        setSignupOtpErrorMsg('');
+        setPendingSignupData({ username, email, password });
+        setIsSignupOtpModalOpen(true);
+
+        showToast("Sending email verification security code... 📧", "info");
+        try {
+          await emailjs.send(
+            EMAILJS_SERVICE_ID,
+            EMAILJS_TEMPLATE_ID,
+            {
+              to_email: email,
+              email: email,
+              user_email: email,
+              to_name: username,
+              name: username,
+              otp: code,
+              code: code
+            },
+            { publicKey: EMAILJS_PUBLIC_KEY }
+          );
+          setIsSignupOtpFailed(false);
+          setSignupOtpErrorMsg('');
+          showToast(`Verification code sent to ${email}! 📧`, "success");
+        } catch (err) {
+          console.error("EmailJS Error:", err);
+          const errText = err?.text || err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+          setSignupOtpErrorMsg(errText);
+          setIsSignupOtpFailed(true);
+          showToast(`EmailJS: ${errText}`, "warning");
+        }
       } else {
         await signInWithEmailAndPassword(auth, authData.email, authData.password);
+        localStorage.setItem('studyflow_login_timestamp', Date.now().toString());
       }
-      localStorage.setItem('studyflow_login_timestamp', Date.now().toString());
     } catch (err) {
       setAuthError(err.message.replace('Firebase:', '').replace('auth/', ''));
       setLoginBotState('confused');
       setTimeout(() => {
         setLoginBotState('typing');
       }, 2500);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifySignupOtp = async () => {
+    if (signupOtpInput.trim() !== signupOtpGenerated) {
+      showToast("Incorrect security code! Verification failed.", "error");
+      return;
+    }
+    if (!pendingSignupData) return;
+
+    setIsSubmitting(true);
+    setAuthError('');
+    try {
+      const { username, email, password } = pendingSignupData;
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCred.user, { displayName: username });
+      localStorage.setItem('studyflow_login_timestamp', Date.now().toString());
+      setIsSignupOtpModalOpen(false);
+      setPendingSignupData(null);
+      showToast("Account created & verified successfully! 🎉", "success");
+    } catch (err) {
+      setAuthError(err.message.replace('Firebase:', '').replace('auth/', ''));
+      setIsSignupOtpModalOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -1198,7 +1295,11 @@ export default function App() {
       await signInWithPopup(auth, provider);
       localStorage.setItem('studyflow_login_timestamp', Date.now().toString());
     } catch (err) {
-      setAuthError(err.message.replace('Firebase:', '').replace('auth/', ''));
+      let msg = err.message.replace('Firebase:', '').replace('auth/', '').trim();
+      if (err.code === 'auth/account-exists-with-different-credential' || err.code === 'auth/email-already-in-use') {
+        msg = "This email is already registered with another sign-in method.";
+      }
+      setAuthError(msg);
       setLoginBotState('confused');
       setTimeout(() => {
         setLoginBotState('typing');
@@ -1239,6 +1340,50 @@ export default function App() {
     setQuoteRevealed(false);
     setDailyQuote("");
     setLoginBotState('wave');
+  };
+
+  // --- ACCOUNT DELETION REQUEST HANDLER ---
+  const getAuthProviderLabel = (u) => {
+    if (!u) return 'Unknown';
+    const providerMap = { 'password': 'Email & Password', 'google.com': 'Google', 'github.com': 'GitHub', 'facebook.com': 'Facebook' };
+    const providerId = u.providerData?.[0]?.providerId || 'password';
+    return providerMap[providerId] || providerId;
+  };
+
+  const handleRequestAccountDeletion = async () => {
+    if (!deleteAccountConfirmed || !user) return;
+    setIsDeleteAccountLoading(true);
+    try {
+      const requestTime = new Intl.DateTimeFormat('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short'
+      }).format(new Date());
+
+      await emailjs.send(
+        DELETE_SERVICE_ID,
+        DELETE_TEMPLATE_ID,
+        {
+          user_name: user.displayName || 'Unknown User',
+          user_email: user.email,
+          user_uid: user.uid,
+          auth_provider: getAuthProviderLabel(user),
+          reason: deleteAccountReason.trim() || 'No reason provided.',
+          request_time: requestTime
+        },
+        { publicKey: DELETE_PUBLIC_KEY, privateKey: DELETE_PRIVATE_KEY }
+      );
+
+      setIsDeleteAccountModalOpen(false);
+      setDeleteAccountReason('');
+      setDeleteAccountConfirmed(false);
+      setIsDeleteAccountSuccessOpen(true);
+    } catch (err) {
+      console.error('Account deletion request failed:', err);
+      const errText = err?.text || err?.message || 'Unknown error';
+      showToast(`Failed to send deletion request: ${errText}`, 'error');
+    } finally {
+      setIsDeleteAccountLoading(false);
+    }
   };
 
   const handleInstallClick = () => {
@@ -1420,7 +1565,7 @@ export default function App() {
     
     const quoteDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'quoteData');
     const readAnnouncementsDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'readAnnouncements');
-    const globalAnnouncementsRef = collection(db, 'artifacts', appId, 'public', 'data', 'global_notifications');
+    const globalAnnouncementsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'announcements');
     const vaultConfigDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'vaultConfig');
     const cgpaDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'cgpaData');
     const focusStatsDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'focusStats');
@@ -1629,10 +1774,10 @@ export default function App() {
   // Admin Notification Handler
   const sendGlobalNotice = async (e) => {
     e.preventDefault();
-    if (!newNotice.title || !newNotice.message || user.email !== ADMIN_EMAIL) return;
-    const data = { ...newNotice, sender: user.displayName, createdAt: Date.now() };
+    if (!newNotice.title || !newNotice.message || user?.email !== ADMIN_EMAIL) return;
+    const data = { ...newNotice, sender: "StudyFlow Admin", createdAt: Date.now() };
     setNewNotice({ title: '', message: '' });
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_notifications'), data);
+    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'announcements'), data);
     showToast("Broadcast message sent 📢", "success");
   };
 
@@ -2049,34 +2194,32 @@ export default function App() {
     setGeneratedOtp(code);
     setUserOtpInput('');
     setIsOtpServiceFailed(false);
+    setDeleteOtpErrorMsg('');
     setIsOtpModalOpen(true);
 
-    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID;
-    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
-    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
-
-    if (serviceId && templateId && publicKey) {
-      showToast("Sending verification code to your email... 📧", "info");
-      try {
-        await emailjs.send(
-          serviceId,
-          templateId,
-          {
-            to_email: user.email,
-            to_name: user.displayName || 'StudyFlow User',
-            otp: code,
-          },
-          publicKey
-        );
-        showToast(`Verification code sent to ${user.email}! 📧`, "success");
-      } catch (err) {
-        console.error("EmailJS Error:", err);
-        setIsOtpServiceFailed(true);
-        showToast("OTP service limit exceeded or failed. Use backup code.", "warning");
-      }
-    } else {
-      console.log(`[StudyFlow OTP] Developer preview code: ${code}`);
-      showToast(`Verification code generated! 📧`, "success");
+    showToast("Sending verification code to your email... 📧", "info");
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          to_email: user.email,
+          email: user.email,
+          user_email: user.email,
+          to_name: user.displayName || 'StudyFlow User',
+          name: user.displayName || 'StudyFlow User',
+          otp: code,
+          code: code
+        },
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      );
+      showToast(`Verification code sent to ${user.email}! 📧`, "success");
+    } catch (err) {
+      console.error("EmailJS Error:", err);
+      const errText = err?.text || err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+      setDeleteOtpErrorMsg(errText);
+      setIsOtpServiceFailed(true);
+      showToast(`EmailJS: ${errText}`, "warning");
     }
   };
 
@@ -2112,29 +2255,32 @@ export default function App() {
     setExportOtpGenerated(code);
     setExportOtpInput('');
     setIsExportOtpFailed(false);
+    setExportOtpErrorMsg('');
     setIsExportOtpOpen(true);
-
-    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'studyflow_otp';
-    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_sg6qkfe';
-    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'MN-YuJZWzW_02VsVO';
 
     showToast("Sending security code for backup export... 📧", "info");
     try {
       await emailjs.send(
-        serviceId,
-        templateId,
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
         {
           to_email: user.email,
+          email: user.email,
+          user_email: user.email,
           to_name: user.displayName || 'StudyFlow User',
+          name: user.displayName || 'StudyFlow User',
           otp: code,
+          code: code
         },
-        publicKey
+        { publicKey: EMAILJS_PUBLIC_KEY }
       );
       showToast(`Verification code sent to ${user.email}! 📧`, "success");
     } catch (err) {
       console.error("EmailJS Error:", err);
+      const errText = err?.text || err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+      setExportOtpErrorMsg(errText);
       setIsExportOtpFailed(true);
-      showToast("Email service quota exceeded. Emergency backup code provided.", "warning");
+      showToast(`EmailJS: ${errText}`, "warning");
     }
   };
 
@@ -2210,27 +2356,28 @@ export default function App() {
     setIsImportOtpFailed(false);
     setIsImportOtpOpen(true);
 
-    const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'studyflow_otp';
-    const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_sg6qkfe';
-    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'MN-YuJZWzW_02VsVO';
-
     showToast("Sending security code for data override... 📧", "info");
     try {
       await emailjs.send(
-        serviceId,
-        templateId,
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
         {
           to_email: user.email,
+          email: user.email,
+          user_email: user.email,
           to_name: user.displayName || 'StudyFlow User',
+          name: user.displayName || 'StudyFlow User',
           otp: code,
+          code: code
         },
-        publicKey
+        { publicKey: EMAILJS_PUBLIC_KEY }
       );
       showToast(`Verification code sent to ${user.email}! 📧`, "success");
     } catch (err) {
       console.error("EmailJS Error:", err);
+      const errText = err?.text || err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
       setIsImportOtpFailed(true);
-      showToast("Email service quota exceeded. Emergency backup code provided.", "warning");
+      showToast(`EmailJS: ${errText}`, "warning");
     }
   };
 
@@ -2250,33 +2397,65 @@ export default function App() {
     try {
       showToast("Importing data to workspace... ⏳", "info");
 
-      const newRoutine = mode === 'override' ? (data.routine || []) : [...routine, ...(data.routine || [])];
-      const newPlans = mode === 'override' ? (data.studyPlans || []) : [...studyPlans, ...(data.studyPlans || [])];
-      const newLinks = mode === 'override' ? (data.links || []) : [...links, ...(data.links || [])];
-      const newCts = mode === 'override' ? (data.cts || []) : [...cts, ...(data.cts || [])];
-      const newAssignments = mode === 'override' ? (data.assignments || []) : [...assignments, ...(data.assignments || [])];
+      // Helper to strip 'id' field from imported items before writing to Firestore
+      const stripId = (item) => {
+        const { id, ...rest } = item;
+        return rest;
+      };
 
-      setRoutine(newRoutine);
-      setStudyPlans(newPlans);
-      setLinks(newLinks);
-      setCts(newCts);
-      setAssignments(newAssignments);
+      // Define collection references
+      const profileCollections = [
+        { key: 'routine', ref: collection(db, 'artifacts', appId, 'users', user.uid, 'profiles', activeProfileId, 'routine'), items: data.routine || [] },
+        { key: 'studyPlans', ref: collection(db, 'artifacts', appId, 'users', user.uid, 'profiles', activeProfileId, 'studyPlans'), items: data.studyPlans || [] },
+        { key: 'cts', ref: collection(db, 'artifacts', appId, 'users', user.uid, 'profiles', activeProfileId, 'cts'), items: data.cts || [] },
+        { key: 'assignments', ref: collection(db, 'artifacts', appId, 'users', user.uid, 'profiles', activeProfileId, 'assignments'), items: data.assignments || [] },
+      ];
+      const userCollections = [
+        { key: 'links', ref: collection(db, 'artifacts', appId, 'users', user.uid, 'links'), items: data.links || [] },
+      ];
+      // Include vault links if present in backup
+      if (data.notes && data.notes.length > 0) {
+        userCollections.push({ key: 'notes', ref: collection(db, 'artifacts', appId, 'users', user.uid, 'vaultLinks'), items: data.notes });
+      }
+      const allCollections = [...profileCollections, ...userCollections];
 
-      const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid);
-      await setDoc(userDocRef, {
-        routine: newRoutine,
-        studyPlans: newPlans,
-        links: newLinks,
-        cts: newCts,
-        assignments: newAssignments,
-        lastImportedAt: new Date().toISOString()
-      }, { merge: true });
+      // Override mode: delete all existing docs in each subcollection first
+      if (mode === 'override') {
+        const { getDocs: firestoreGetDocs } = await import('firebase/firestore');
+        for (const col of allCollections) {
+          const existingSnap = await firestoreGetDocs(col.ref);
+          if (!existingSnap.empty) {
+            // Batch delete in groups of 500 (Firestore limit)
+            const docs = existingSnap.docs;
+            for (let i = 0; i < docs.length; i += 499) {
+              const batch = writeBatch(db);
+              docs.slice(i, i + 499).forEach(d => batch.delete(d.ref));
+              await batch.commit();
+            }
+          }
+        }
+      }
+
+      // Write each imported item as an individual document via batched writes
+      for (const col of allCollections) {
+        if (col.items.length === 0) continue;
+        // Firestore batch limit is 500 operations
+        for (let i = 0; i < col.items.length; i += 499) {
+          const batch = writeBatch(db);
+          const chunk = col.items.slice(i, i + 499);
+          chunk.forEach(item => {
+            const newDocRef = doc(col.ref); // auto-generate ID
+            batch.set(newDocRef, stripId(item));
+          });
+          await batch.commit();
+        }
+      }
 
       showToast(`Workspace data successfully ${mode === 'override' ? 'overwritten' : 'merged'}! 🎉`, "success");
       setImportedPendingData(null);
     } catch (err) {
       console.error("Import execution error:", err);
-      showToast("Failed to save imported data.", "error");
+      showToast("Failed to save imported data. " + (err?.message || ''), "error");
     }
   };
 
@@ -2484,7 +2663,7 @@ ${msg}`;
               {isExportOtpFailed && (
                 <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl text-left">
                   <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 leading-tight">
-                    Notice: Email service quota reached limit. Use emergency code below:
+                    Notice: {exportOtpErrorMsg ? `EmailJS status: "${exportOtpErrorMsg}". Use emergency code below:` : "Email service quota reached limit. Use emergency code below:"}
                   </p>
                   <p className="text-center font-mono font-black text-lg text-amber-600 dark:text-amber-300 mt-1 select-all tracking-wider">
                     {exportOtpGenerated}
@@ -2492,29 +2671,88 @@ ${msg}`;
                 </div>
               )}
 
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="Enter 6-digit OTP"
-                value={exportOtpInput}
-                onChange={e => setExportOtpInput(e.target.value)}
-                className="w-full text-center font-mono text-xl tracking-widest px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500 text-slate-800 dark:text-white mb-6 font-bold"
-              />
+              <form onSubmit={(e) => { e.preventDefault(); handleVerifyExportOtp(); }}>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Enter 6-digit OTP"
+                  value={exportOtpInput}
+                  onChange={e => setExportOtpInput(e.target.value)}
+                  className="w-full text-center font-mono text-xl tracking-widest px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500 text-slate-800 dark:text-white mb-6 font-bold"
+                />
 
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setIsExportOtpOpen(false)} 
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-xs transition-all outline-none cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleVerifyExportOtp} 
-                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all outline-none cursor-pointer"
-                >
-                  Verify & Download
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setIsExportOtpOpen(false)} 
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-xs transition-all outline-none cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all outline-none cursor-pointer"
+                  >
+                    Verify & Download
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* SIGNUP OTP VERIFICATION MODAL */}
+        {isSignupOtpModalOpen && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsSignupOtpModalOpen(false)}>
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full text-center relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setIsSignupOtpModalOpen(false)} className="absolute top-5 right-5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors outline-none cursor-pointer"><X size={18} /></button>
+
+              <div className="mx-auto w-14 h-14 bg-orange-500/10 border border-orange-500/30 text-orange-500 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                <ShieldCheck size={28} />
               </div>
+
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-white mb-1">Verify Email to Sign Up</h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                We sent a 6-digit verification code to <span className="text-orange-500 font-bold">{pendingSignupData?.email}</span> to confirm your email.
+              </p>
+
+              {isSignupOtpFailed && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl text-left">
+                  <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 leading-tight">
+                    Notice: {signupOtpErrorMsg ? `EmailJS status: "${signupOtpErrorMsg}". Use emergency code below:` : "Email service quota reached limit. Use emergency code below:"}
+                  </p>
+                  <p className="text-center font-mono font-black text-lg text-amber-600 dark:text-amber-300 mt-1 select-all tracking-wider">
+                    {signupOtpGenerated}
+                  </p>
+                </div>
+              )}
+
+              <form onSubmit={(e) => { e.preventDefault(); handleVerifySignupOtp(); }}>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Enter 6-digit OTP"
+                  value={signupOtpInput}
+                  onChange={e => setSignupOtpInput(e.target.value)}
+                  className="w-full text-center font-mono text-xl tracking-widest px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-orange-500 text-slate-800 dark:text-white mb-6 font-bold"
+                />
+
+                <div className="flex items-center gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setIsSignupOtpModalOpen(false)} 
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-xs transition-all outline-none cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-all outline-none cursor-pointer"
+                  >
+                    Verify & Create Account
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -2602,29 +2840,32 @@ ${msg}`;
                 </div>
               )}
 
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="Enter 6-digit Security Code"
-                value={importOtpInput}
-                onChange={e => setImportOtpInput(e.target.value)}
-                className="w-full text-center font-mono text-xl tracking-widest px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-red-500 text-slate-800 dark:text-white mb-6 font-bold"
-              />
+              <form onSubmit={(e) => { e.preventDefault(); handleVerifyImportOtp(); }}>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Enter 6-digit Security Code"
+                  value={importOtpInput}
+                  onChange={e => setImportOtpInput(e.target.value)}
+                  className="w-full text-center font-mono text-xl tracking-widest px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-red-500 text-slate-800 dark:text-white mb-6 font-bold"
+                />
 
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setIsImportOtpOpen(false)} 
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-xs transition-all outline-none cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleVerifyImportOtp} 
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-red-500/20 active:scale-95 transition-all outline-none cursor-pointer"
-                >
-                  Confirm Override
-                </button>
-              </div>
+                <div className="flex items-center gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setIsImportOtpOpen(false)} 
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-xs transition-all outline-none cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-red-500/20 active:scale-95 transition-all outline-none cursor-pointer"
+                  >
+                    Verify & Override Data
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -2979,7 +3220,15 @@ ${msg}`;
               </div>
               <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-xl focus-within:ring-1 focus-within:ring-orange-500/50 transition-all shadow-sm group">
                 <Lock className="text-slate-400 group-focus-within:text-orange-500 transition-colors shrink-0" size={16} />
-                <input required type="password" placeholder="Password" className="w-full bg-transparent font-semibold text-xs dark:text-white outline-none" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} onFocus={() => setLoginBotState('focus-password')} onBlur={() => setLoginBotState('typing')} />
+                <input required type={showPassword ? "text" : "password"} placeholder="Password" className="w-full bg-transparent font-semibold text-xs dark:text-white outline-none" value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})} onFocus={() => setLoginBotState('focus-password')} onBlur={() => setLoginBotState('typing')} />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors outline-none cursor-pointer p-0.5 shrink-0"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
               
               {authError && <div className="bg-red-50/80 dark:bg-red-900/20 p-3 rounded-xl border border-red-200/50 dark:border-red-900/30 text-xs font-semibold text-red-600 leading-tight">{authError}</div>}
@@ -3111,7 +3360,14 @@ ${msg}`;
              <div className={`pt-4 mt-2 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} px-2`}>
                 <div className="flex items-center gap-2 overflow-hidden" title={sidebarCollapsed ? user?.displayName : undefined}>
                   <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-md flex items-center justify-center text-slate-500 border border-white/40 dark:border-white/10 shadow-sm shrink-0"><UserCircle size={16} /></div>
-                  {!sidebarCollapsed && <div className="overflow-hidden"><p className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[120px]">{user?.displayName}</p></div>}
+                  {!sidebarCollapsed && (
+                     <div className="overflow-hidden flex items-center gap-1.5">
+                       <p className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[90px]">{user?.displayName}</p>
+                       {user?.email === ADMIN_EMAIL && (
+                         <span className="text-[9px] font-extrabold text-orange-600 dark:text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0">Admin</span>
+                       )}
+                     </div>
+                   )}
                 </div>
                 {!sidebarCollapsed && <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors outline-none cursor-pointer"><LogOut size={16} /></button>}
              </div>
@@ -3139,6 +3395,9 @@ ${msg}`;
              <h2 className="text-lg font-bold text-slate-800 dark:text-white capitalize">
                  {activeTab === 'assessments' ? 'CT & Assignments' : activeTab === 'cgpa' ? 'CGPA & Payment' : activeTab === 'links' ? 'Link Vault' : activeTab}
                </h2>
+               {user?.email === ADMIN_EMAIL && (
+                 <span className="text-[10px] font-extrabold text-orange-600 dark:text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider ml-1">Admin</span>
+               )}
                {!isMobileDevice && activeTab === 'dashboard' && (
                  <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-300 select-none px-3 py-1 bg-slate-100/85 dark:bg-slate-800/85 rounded-full border border-slate-200/60 dark:border-slate-800/80 shadow-xs tracking-wider uppercase flex items-center gap-1.5 ml-2">
                    <School size={11} className="text-orange-500 animate-pulse" />
@@ -3343,9 +3602,20 @@ ${msg}`;
                     )}
 
                     <button onClick={() => { setIsVaultOpen(true); setIsProfileModalOpen(false); }} className="w-full flex items-center gap-3 p-2.5 mb-1 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl transition-all font-semibold text-sm outline-none"><Vault size={16} className="text-indigo-500" /> Hidden Vault</button>
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all font-semibold text-sm outline-none border-none">
-                      <LogOut size={16} /> Sign Out
-                    </button>
+
+                    {/* Delete Account & Sign Out row */}
+                    <div className="flex items-center gap-1.5 w-full">
+                      <button onClick={handleLogout} className="flex-1 flex items-center gap-3 p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all font-semibold text-sm outline-none border-none">
+                        <LogOut size={16} /> Sign Out
+                      </button>
+                      <button
+                        onClick={() => { setIsProfileModalOpen(false); setIsDeleteAccountModalOpen(true); }}
+                        className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all outline-none cursor-pointer"
+                        title="Request Account Deletion"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
               )}
             </div>
@@ -5302,47 +5572,140 @@ ${msg}`;
               </p>
             </div>
 
-            <div className="space-y-4">
-              <input 
-                type="text" 
-                maxLength={6}
-                value={userOtpInput}
-                onChange={e => setUserOtpInput(e.target.value.replace(/\D/g, ''))}
-                placeholder="Enter 6-Digit OTP" 
-                className="w-full text-center tracking-[0.5em] font-extrabold text-lg px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-red-500/50 dark:text-white outline-none"
-              />
-              {isOtpServiceFailed && (
-                <div className="bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 text-left space-y-1">
-                  <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider block">OTP Service Limit Exceeded</span>
-                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Due to high traffic or monthly limits, email delivery is currently paused. Please use this backup code to proceed: <span className="font-extrabold text-amber-600 dark:text-amber-400 select-all">{generatedOtp}</span>
-                  </p>
-                </div>
-              )}
-              {!process.env.REACT_APP_EMAILJS_PUBLIC_KEY && !isOtpServiceFailed && (
-                <div className="bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/15 rounded-xl p-3 text-left">
-                  <span className="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider block mb-1">Developer Helper Tooltip</span>
-                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">Since you have not set up EmailJS in your `.env` file, your code is: <span className="font-extrabold text-orange-600 dark:text-orange-400">{generatedOtp}</span></p>
-                </div>
-              )}
+            <form onSubmit={(e) => { e.preventDefault(); executeBatchDeleteMaterials(); }} className="space-y-6">
+              <div className="space-y-4">
+                <input 
+                  type="text" 
+                  maxLength={6}
+                  value={userOtpInput}
+                  onChange={e => setUserOtpInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Enter 6-Digit OTP" 
+                  className="w-full text-center tracking-[0.5em] font-extrabold text-lg px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-red-500/50 dark:text-white outline-none"
+                />
+                {isOtpServiceFailed && (
+                  <div className="bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 text-left space-y-1">
+                    <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider block">
+                      {deleteOtpErrorMsg ? `EmailJS status: "${deleteOtpErrorMsg}"` : "OTP Service Limit Exceeded"}
+                    </span>
+                    <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Please use this backup code to proceed: <span className="font-extrabold text-amber-600 dark:text-amber-400 select-all">{generatedOtp}</span>
+                    </p>
+                  </div>
+                )}
+                {!process.env.REACT_APP_EMAILJS_PUBLIC_KEY && !isOtpServiceFailed && (
+                  <div className="bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/15 rounded-xl p-3 text-left">
+                    <span className="text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider block mb-1">Developer Helper Tooltip</span>
+                    <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">Since you have not set up EmailJS in your `.env` file, your code is: <span className="font-extrabold text-orange-600 dark:text-orange-400">{generatedOtp}</span></p>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsOtpModalOpen(false)}
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-all outline-none border border-black/5 dark:border-white/5 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-xs shadow-md shadow-red-500/10 active:scale-95 transition-all outline-none border border-white/10 cursor-pointer"
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ACCOUNT DELETION REQUEST CONFIRMATION MODAL */}
+      {isDeleteAccountModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => { if (!isDeleteAccountLoading) setIsDeleteAccountModalOpen(false); }}>
+          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <button onClick={() => { if (!isDeleteAccountLoading) setIsDeleteAccountModalOpen(false); }} className="absolute top-5 right-5 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors outline-none cursor-pointer"><X size={18} /></button>
+
+            <div className="text-center mb-5">
+              <div className="mx-auto w-14 h-14 bg-red-500/10 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                <ShieldAlert size={28} />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-white mb-1">Request Account Deletion</h3>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
+                Your account will <span className="text-red-500 font-bold">NOT</span> be deleted immediately. This request will be sent to the StudyFlow administrator for manual review.
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                type="button"
-                onClick={() => setIsOtpModalOpen(false)}
-                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-all outline-none border border-black/5 dark:border-white/5 cursor-pointer"
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">Reason for deleting your account (optional)</label>
+                <textarea
+                  value={deleteAccountReason}
+                  onChange={e => setDeleteAccountReason(e.target.value)}
+                  placeholder="Tell us why you'd like to delete your account..."
+                  rows={3}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50 dark:text-white outline-none resize-none"
+                  disabled={isDeleteAccountLoading}
+                />
+              </div>
+
+              <label className="flex items-start gap-3 cursor-pointer select-none group">
+                <input
+                  type="checkbox"
+                  checked={deleteAccountConfirmed}
+                  onChange={e => setDeleteAccountConfirmed(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-red-500 rounded cursor-pointer"
+                  disabled={isDeleteAccountLoading}
+                />
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 leading-relaxed group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors">
+                  I understand that this request will be manually reviewed and my account will not be deleted immediately.
+                </span>
+              </label>
+
+              <button
+                onClick={handleRequestAccountDeletion}
+                disabled={!deleteAccountConfirmed || isDeleteAccountLoading}
+                className="w-full py-3.5 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 transition-all active:scale-95 outline-none flex items-center justify-center gap-2"
               >
-                Cancel
-              </button>
-              <button 
-                type="button"
-                onClick={executeBatchDeleteMaterials}
-                className="py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-xs shadow-md shadow-red-500/10 active:scale-95 transition-all outline-none border border-white/10 cursor-pointer"
-              >
-                Confirm Delete
+                {isDeleteAccountLoading ? (
+                  <><Loader2 size={16} className="animate-spin" /> Sending Request...</>
+                ) : (
+                  <><Trash2 size={16} /> Request Account Deletion</>
+                )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ACCOUNT DELETION SUCCESS MODAL */}
+      {isDeleteAccountSuccessOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl p-6 sm:p-8 rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl max-w-md w-full text-center relative animate-in zoom-in-95 duration-200">
+            <div className="mx-auto w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+              <CheckCircle2 size={28} />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-800 dark:text-white mb-3">Request Submitted Successfully</h3>
+            <div className="text-left space-y-3 mb-6">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">
+                Your account has <span className="text-emerald-500 font-bold">NOT</span> been deleted.
+              </p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">
+                Your deletion request has been sent to the StudyFlow administrator for manual review.
+              </p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">
+                The administrator may contact you using your registered email address to verify your identity and obtain final confirmation before permanently deleting your account.
+              </p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">
+                If you change your mind, simply reply to the administrator and let them know that you no longer wish to delete your account.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsDeleteAccountSuccessOpen(false)}
+              className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all active:scale-95 outline-none cursor-pointer"
+            >
+              OK
+            </button>
           </div>
         </div>
       )}
